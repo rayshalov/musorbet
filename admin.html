@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — FRAGDROP</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="page-admin">
+
+<header class="topbar">
+  <a class="logo" href="index.html"><span class="logo-mark">◤</span>FRAG<b>DROP</b></a>
+  <nav class="nav">
+    <a href="upgrade.html" class="nav-link">Upgrader</a>
+    <a href="#" class="nav-link disabled">Cases <small>soon</small></a>
+    <a href="#" class="nav-link disabled">Coinflip <small>soon</small></a>
+  </nav>
+  <a href="upgrade.html" class="btn btn-primary btn-sm">← К игре</a>
+</header>
+
+<!-- Экран входа -->
+<main class="admin-login" id="admin-login">
+  <div class="login-box">
+    <div class="login-ico">🛠️</div>
+    <h2>Админ-панель</h2>
+    <p class="muted">Локальный PIN: <code>1337</code> (смени в admin.js)</p>
+    <input type="password" id="pin-input" class="input" placeholder="Введите PIN" autocomplete="off">
+    <button class="btn btn-primary btn-xl" onclick="tryAdminLogin()">Войти</button>
+    <p class="pin-error" id="pin-error" hidden>Неверный PIN</p>
+  </div>
+</main>
+
+<!-- Панель -->
+<main class="admin-panel" id="admin-panel" hidden>
+
+  <div class="admin-grid">
+
+    <!-- Статистика -->
+    <div class="admin-card stats-card">
+      <h3>Статистика</h3>
+      <div class="stat-row"><span>Всего апгрейдов</span><b id="st-total">0</b></div>
+      <div class="stat-row"><span>Побед</span><b class="c-green" id="st-wins">0</b></div>
+      <div class="stat-row"><span>Поражений</span><b class="c-red" id="st-losses">0</b></div>
+      <div class="stat-row"><span>Инвентарь (шт)</span><b id="st-inv">0</b></div>
+      <div class="stat-row"><span>Объём инвентаря</span><b class="c-gold" id="st-invsum">$0</b></div>
+      <div class="stat-row"><span>Всего выиграно</span><b class="c-green" id="st-won">$0</b></div>
+      <div class="stat-row"><span>Всего потеряно</span><b class="c-red" id="st-lost">$0</b></div>
+    </div>
+
+    <!-- Быстрая выдача -->
+    <div class="admin-card grant-card">
+      <h3>Выдать скины</h3>
+      <p class="muted small">Выбери скин из каталога — он появится в инвентаре.</p>
+      <div class="grant-controls">
+        <select id="grant-rar" class="select">
+          <option value="all">Все редкости</option>
+          <option value="blue">Consumer</option>
+          <option value="purple">Restricted</option>
+          <option value="pink">Classified</option>
+          <option value="red">Covert</option>
+          <option value="gold">★ Knives</option>
+        </select>
+        <input type="number" id="grant-q" class="input small-input" value="1" min="1" max="100">
+        <button class="btn btn-primary" onclick="grantRandom()">Выдать</button>
+      </div>
+      <p class="muted small">…или вручную точечно:</p>
+      <div class="grant-manual">
+        <select id="grant-exact" class="select"></select>
+        <button class="btn" onclick="grantExact()">Выдать выбранный</button>
+      </div>
+      <div class="grant-bulk">
+        <button class="btn btn-gold" onclick="grantBulk('starter')">📦 Стартовый набор (10 шт)</button>
+        <button class="btn btn-gold" onclick="grantBulk('lucky')">🍀 Лаки-день (3 × Covert)</button>
+        <button class="btn btn-gold" onclick="grantBulk('knife')">🔪 Каждому по ножу</button>
+      </div>
+    </div>
+
+    <!-- Свой скин -->
+    <div class="admin-card custom-card">
+      <h3>Создать свой скин</h3>
+      <p class="muted small">Любое название, любая цена.</p>
+      <input type="text" id="cs-name" class="input" placeholder="Название (AK-47 | Ваш скин)">
+      <div class="custom-row">
+        <select id="cs-rar" class="select">
+          <option value="blue">Consumer (синий)</option>
+          <option value="purple">Restricted (фиолет)</option>
+          <option value="pink">Classified (розовый)</option>
+          <option value="red">Covert (красный)</option>
+          <option value="gold">★ Knife (золото)</option>
+        </select>
+        <input type="number" id="cs-price" class="input small-input" placeholder="$" min="0.01" step="0.01">
+      </div>
+      <button class="btn btn-primary" onclick="createCustomSkin()">Создать и выдать</button>
+    </div>
+
+    <!-- Ссылки -->
+    <div class="admin-card links-card">
+      <h3>Навигация</h3>
+      <a class="btn btn-primary" href="upgrade.html">▶ Играть в апгрейдер</a>
+      <a class="btn btn-ghost" onclick="resetStats()" href="#">Сбросить статистику</a>
+      <a class="btn btn-danger" onclick="wipeAll()" href="#">☠ Полный вайп (инвентарь+статистика)</a>
+    </div>
+
+  </div>
+
+  <!-- Инвентарь -->
+  <section class="inventory-section">
+    <div class="inv-head">
+      <h2>Инвентарь игрока</h2>
+      <button class="btn btn-sm btn-danger" onclick="clearInv()">Очистить инвентарь</button>
+    </div>
+    <div class="inv-grid" id="admin-inv-grid"></div>
+    <div class="inv-empty" id="admin-inv-empty" hidden>
+      <div class="inv-empty-ico">📭</div><p>Пусто. Выдай что-нибудь сверху.</p>
+    </div>
+  </section>
+
+</main>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

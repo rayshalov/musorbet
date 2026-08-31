@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upgrader — FRAGDROP</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="page-upgrader">
+
+<header class="topbar">
+  <a class="logo" href="index.html"><span class="logo-mark">◤</span>FRAG<b>DROP</b></a>
+  <nav class="nav">
+    <a href="upgrade.html" class="nav-link active">Upgrader</a>
+    <a href="#" class="nav-link disabled">Cases <small>soon</small></a>
+    <a href="#" class="nav-link disabled">Coinflip <small>soon</small></a>
+  </nav>
+  <div class="topbar-right">
+    <div class="inv-badge" id="inv-badge">🎒 0 шт · $0.00</div>
+    <button class="btn btn-admin" onclick="openAdminModal()">Admin</button>
+  </div>
+</header>
+
+<main class="upgrade-wrap">
+
+  <div class="upgrade-stage">
+
+    <!-- ===== КОЛЕСО ===== -->
+    <div class="wheel-wrap">
+      <div class="wheel" id="wheel">
+        <svg viewBox="0 0 300 300" class="wheel-svg">
+          <defs>
+            <linearGradient id="wg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#2bd4a4"/>
+              <stop offset="1" stop-color="#19e3b1"/>
+            </linearGradient>
+            <filter id="wglow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="6" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="nglow" x="-60%" y="-60%" width="220%" height="220%">
+              <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#fff" flood-opacity="0.55"/>
+            </filter>
+          </defs>
+
+          <!-- деления по кругу -->
+          <circle class="ticks" cx="150" cy="150" r="141"/>
+
+          <!-- серое кольцо (зона проигрыша) -->
+          <circle class="ring-track" cx="150" cy="150" r="120"/>
+
+          <!-- зелёная зона игрока (старт с 12 часов, по часовой) -->
+          <circle class="ring-win" id="win-arc" cx="150" cy="150" r="120"
+                  transform="rotate(-90 150 150)" filter="url(#wglow)"/>
+
+          <!-- метки на границах зоны -->
+          <g id="zone-marks"></g>
+
+          <!-- стрелка -->
+          <g class="needle" id="needle">
+            <polygon points="150,14 141,52 150,44 159,52" filter="url(#nglow)"/>
+          </g>
+        </svg>
+
+        <div class="wheel-center">
+          <div class="wc-mult" id="up-mult">2.00×</div>
+          <div class="wc-chance">шанс <b id="chance-val">50%</b></div>
+        </div>
+      </div>
+      <div class="wheel-hint">↺ тяни по кольцу — настрой шанс</div>
+    </div>
+
+    <!-- пресеты шанса -->
+    <div class="chance-presets">
+      <span>Шанс:</span>
+      <button class="preset" data-c="5">5%</button>
+      <button class="preset" data-c="20">20%</button>
+      <button class="preset" data-c="50">50%</button>
+      <button class="preset" data-c="75">75%</button>
+      <button class="preset" data-c="95">95%</button>
+    </div>
+
+    <!-- ставка → награда -->
+    <div class="upgrade-line">
+      <div class="up-item" id="stage-from">
+        <div class="up-label">Твой скин</div>
+        <div class="card locked" id="card-from"><div class="card-empty">Выбери скин<br>из инвентаря ↓</div></div>
+      </div>
+      <div class="to-arrow">⟶</div>
+      <div class="up-item" id="stage-to">
+        <div class="up-label">Получишь</div>
+        <div class="card locked" id="card-to"><div class="card-empty">Выбери скин<br>целью ↓</div></div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-xl" id="spin-btn" disabled>Выбери оба скина</button>
+    <div class="up-history" id="up-history"></div>
+  </div>
+
+</main>
+
+<section class="inventory-section">
+  <div class="inv-head">
+    <h2>Твой инвентарь</h2>
+    <div class="inv-filter">
+      <button class="btn btn-sm active" data-rar="all">Все</button>
+      <button class="btn btn-sm" data-rar="blue">Consumer</button>
+      <button class="btn btn-sm" data-rar="purple">Restricted</button>
+      <button class="btn btn-sm" data-rar="pink">Classified</button>
+      <button class="btn btn-sm" data-rar="red">Covert</button>
+      <button class="btn btn-sm" data-rar="gold">★ Ножи</button>
+    </div>
+  </div>
+  <div class="inv-grid" id="inv-grid"></div>
+  <div class="inv-empty" id="inv-empty" hidden>
+    <div class="inv-empty-ico">📭</div>
+    <p>Инвентарь пуст. Загляни в <a href="admin.html">админку</a> и выдай себе скины.</p>
+  </div>
+</section>
+
+<!-- Пул целевых скинов -->
+<section class="inventory-section pool-section">
+  <div class="inv-head">
+    <h2>Скины для апгрейда</h2>
+    <div class="inv-total">Всего: <b id="pool-total">0</b> шт</div>
+  </div>
+  <div class="inv-grid" id="pool-grid"></div>
+</section>
+
+<!-- Модалка выигрыша -->
+<div class="modal-overlay" id="win-modal" hidden>
+  <div class="modal win-modal">
+    <div class="win-emoji">🎉</div>
+    <h2 id="win-title">Апгрейд успешен!</h2>
+    <p id="win-sub">Ты получил</p>
+    <div id="win-card"></div>
+    <button class="btn btn-primary" onclick="closeWinModal()">Забрать</button>
+  </div>
+</div>
+
+<!-- Мини-админка (PIN) -->
+<div class="modal-overlay" id="admin-modal" hidden>
+  <div class="modal admin-modal">
+    <h2>Админский доступ</h2>
+    <p class="muted">Введи PIN из <code>admin.html</code></p>
+    <input type="password" id="admin-pin" class="input" placeholder="PIN" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="tryAdminLogin()">Войти</button>
+      <a class="btn btn-ghost" href="admin.html">Открыть полную админку</a>
+      <button class="btn btn-ghost" onclick="closeAdminModal()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

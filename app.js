@@ -1,0 +1,459 @@
+/* ===== FRAGDROP — core app (игровая логика: колесо апгрейда) ===== */
+
+/* ---------- state ---------- */
+const DB_KEY = "fragdrop_db_v1";
+
+function loadDB(){
+  try{
+    const raw = localStorage.getItem(DB_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return { inv:[], stats:{ total:0, wins:0, losses:0, won:0, lost:0 }, uid:1 };
+}
+function saveDB(){ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
+let DB = loadDB();
+
+function nextId(){ return DB.uid++; }
+
+function addItem(skinDef){
+  const item = { id: nextId(), name: skinDef.name, price: skinDef.price, rar: skinDef.rar, ico: skinDef.ico };
+  DB.inv.push(item);
+  saveDB();
+  return item;
+}
+
+function removeItem(id){
+  const i = DB.inv.findIndex(x => x.id === id);
+  if(i === -1) return null;
+  return DB.inv.splice(i,1)[0];
+}
+
+function invSum(){ return DB.inv.reduce((s,x)=>s+x.price,0); }
+function fmt(n){ return "$" + n.toLocaleString("en-US",{minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function skinCard(item, opts={}){
+  const cls = ["card","rar-"+item.rar];
+  if(opts.selected) cls.push("selected");
+  return `<div class="${cls.join(" ")}" data-id="${item.id}">
+    <div class="rarity-dot"></div>
+    <div class="skin-ico">${item.ico||"🔫"}</div>
+    <div class="skin-name">${esc(item.name)}</div>
+    <div class="skin-price">${fmt(item.price)}</div>
+  </div>`;
+}
+
+function toast(msg, type="ok"){
+  const t = document.createElement("div");
+  t.className = "toast toast-"+type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(()=> t.classList.add("show"));
+  setTimeout(()=>{ t.classList.remove("show"); setTimeout(()=>t.remove(),350); }, 2400);
+}
+
+/* ---------- upgrader state ---------- */
+let selFrom = null;   // скин из инвентаря (ставка)
+let selTo = null;     // цель из каталога (награда)
+let spinning = false;
+let chance = 50;
+let wheelAngle = 0;   // текущий угол стрелки (градусы)
+
+/* окно допустимых цен цели: [T*0.45 .. T*1.3], где T = ставка × множитель */
+function targetWindow(){
+  const from = selFrom ? selFrom.price : 0;
+  const T = from * (100/chance);
+  return { lo: Math.max(from*1.05, T*0.45), hi: T*1.3 };
+}
+function fairChance(fromPrice, toPrice){
+  return Math.max(5, Math.min(95, Math.floor(fromPrice/toPrice*100)));
+}
+
+/* ---------- колесо: геометрия ---------- */
+const R = 120, C = 150, CIRC = 2*Math.PI*R;
+
+/* отрисовать зелёную зону игрока на кольце */
+function drawWheelZone(){
+  const arc = $("#win-arc");
+  if(!arc) return;
+  const len = CIRC * chance/100;
+  arc.setAttribute("stroke-dasharray", `${len} ${CIRC}`);
+  // зона начинается сверху (12 часов): rotate(-90) уже в transform,
+  // поэтому dasharray "0 len rest" не нужен — начало дуги = 3 часа, повёрнуто на -90 → 12 часов, идёт по часовой.
+  // Начало зоны всегда вверху, длина = шанс.
+}
+
+/* ---------- шанс: пресеты + драг по колесу ---------- */
+function syncPresets(){
+  $$(".preset").forEach(b=>{
+    b.classList.toggle("active", +b.dataset.c === chance);
+  });
+}
+
+function angleFromEvent(e, el){
+  const r = el.getBoundingClientRect();
+  const cx = r.left + r.width/2, cy = r.top + r.height/2;
+  const dx = e.clientX - cx, dy = e.clientY - cy;
+  // угол от 12 часов, по часовой стрелке, в градусах
+  let a = Math.atan2(dx, -dy) * 180/Math.PI;
+  return ((a % 360) + 360) % 360;
+}
+
+function chanceUIInit(){
+  $$(".preset").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      chance = +b.dataset.c;
+      syncChance({resetTarget:true});
+      syncPresets();
+    });
+  });
+
+  /* драг по кольцу: тянешь — изменяешь размер зоны */
+  const wheelEl = $("#wheel");
+  if(wheelEl){
+    let dragging = false;
+    let moved = false;
+    const slider = $("#chance-slider");
+
+    wheelEl.addEventListener("pointerdown", e=>{
+      if(spinning) return;
+      dragging = true; moved = false;
+      wheelEl.classList.add("dragging");
+      wheelEl.setPointerCapture(e.pointerId);
+    });
+    wheelEl.addEventListener("pointermove", e=>{
+      if(!dragging || spinning) return;
+      const a = angleFromEvent(e, wheelEl);
+      const c = Math.max(5, Math.min(95, Math.round(a/3.6)));
+      if(c !== chance){
+        moved = true;
+        chance = c;
+        if(slider) slider.value = c;
+        syncChance({resetTarget:true, noUpdateBtn:false});
+        syncPresets();
+      }
+    });
+    wheelEl.addEventListener("pointerup", e=>{
+      dragging = false;
+      wheelEl.classList.remove("dragging");
+      /* клик без движения = нажатие "Апгрейд" не нужно; но клик по центру ничего */
+    });
+    wheelEl.addEventListener("pointercancel", ()=>{
+      dragging = false;
+      wheelEl.classList.remove("dragging");
+    });
+  }
+
+  const slider = $("#chance-slider");
+  if(slider){
+    slider.addEventListener("input", ()=>{
+      chance = +slider.value;
+      syncChance({resetTarget:true});
+      syncPresets();
+    });
+  }
+  chance = +(slider ? slider.value : 50);
+  syncPresets();
+}
+
+/* применить шанс ко всем элементам интерфейса */
+function syncChance(opts={}){
+  drawWheelZone();
+  const mult = 100/chance;
+  const cv = $("#chance-val");
+  cv.textContent = chance + "%";
+  $("#up-mult").textContent = mult.toFixed(2) + "×";
+  cv.className = chance >= 60 ? "c-green" : (chance >= 30 ? "c-gold" : "c-red");
+  syncPresets();
+
+  // цель могла выйти за окно — сбрасываем
+  if(opts.resetTarget && selTo){
+    const w = targetWindow();
+    if(selTo.price < w.lo || selTo.price > w.hi){
+      selTo = null;
+      renderPool();
+    }
+  }
+  if(!opts.noUpdateBtn) updateSpinBtn();
+  renderTo(); // обновить "награда ≈"
+}
+
+/* ---------- выбор ставки ---------- */
+function selectFrom(id){
+  if(spinning) return;
+  const item = DB.inv.find(x=>x.id===id);
+  if(!item) return;
+  if(selFrom && selFrom.id === id){           // повторный клик — снять выбор
+    selFrom = null; selTo = null;
+  } else {
+    selFrom = item;
+    if(selTo && (selTo.price <= item.price*1.05 || fairChance(item.price, selTo.price) < 5)){
+      selTo = null;
+      toast("Эта цель не подходит для нового скина","err");
+    }
+  }
+  renderFrom(); renderTo(); renderPool(); updateSpinBtn();
+}
+
+function renderFrom(){
+  const box = $("#card-from");
+  if(!box) return;
+  if(selFrom){
+    box.className = "card rar-"+selFrom.rar;
+    box.innerHTML = `<div class="rarity-dot"></div><div class="skin-ico">${selFrom.ico}</div><div class="skin-name">${esc(selFrom.name)}</div><div class="skin-price">${fmt(selFrom.price)}</div>`;
+  } else {
+    box.className = "card locked";
+    box.innerHTML = `<div class="card-empty">Выбери скин<br>из инвентаря ↓</div>`;
+  }
+}
+
+/* ---------- выбор цели ---------- */
+function selectTo(idx){
+  if(spinning) return;
+  const def = SKINS[idx];
+  if(!def) return;
+  if(!selFrom){ toast("Сначала выбери свой скин из инвентаря","err"); return; }
+  if(selTo && selTo.name === def.name){ selTo = null; }   // повторный клик — снять
+  else if(def.price <= selFrom.price*1.05){ toast("Цель должна быть дороже твоего скина","err"); return; }
+  else if(fairChance(selFrom.price, def.price) < 5){ toast("Слишком дорогая цель для этого скина","err"); return; }
+  else {
+    selTo = def;
+    chance = fairChance(selFrom.price, def.price);   // честный шанс из цен
+    const slider = $("#chance-slider");
+    if(slider) slider.value = chance;
+    syncChance();
+  }
+  renderTo(); renderPool(); updateSpinBtn();
+}
+
+function renderTo(){
+  const box = $("#card-to");
+  if(!box) return;
+  if(selTo){
+    box.className = "card rar-"+selTo.rar;
+    box.innerHTML = `<div class="rarity-dot"></div><div class="skin-ico">${selTo.ico}</div><div class="skin-name">${esc(selTo.name)}</div><div class="skin-price">${fmt(selTo.price)}</div>`;
+  } else if(selFrom){
+    const T = selFrom.price * (100/chance);
+    box.className = "card locked";
+    box.innerHTML = `<div class="card-empty">Награда ≈ <b>${fmt(T)}</b><br>выбери скин в пуле ↓</div>`;
+  } else {
+    box.className = "card locked";
+    box.innerHTML = `<div class="card-empty">Выбери скин<br>целью ↓</div>`;
+  }
+}
+
+/* ---------- пул целей ---------- */
+function renderPool(){
+  const grid = $("#pool-grid");
+  if(!grid) return;
+
+  let list;
+  if(selFrom){
+    const w = targetWindow();
+    const T = selFrom.price * (100/chance);
+    list = SKINS.map((s,i)=>({...s, idx:i}))
+      .filter(s => s.price >= w.lo && s.price <= w.hi)
+      .sort((a,b)=> Math.abs(a.price-T) - Math.abs(b.price-T));
+    if(!list.length){
+      grid.innerHTML = `<div class="card locked rar-blue"><div class="card-empty">Нет подходящих целей.<br>Измени шанс или скин.</div></div>`;
+      return;
+    }
+  } else {
+    list = SKINS.map((s,i)=>({...s, idx:i})).sort((a,b)=>a.price-b.price);
+  }
+
+  grid.innerHTML = list.map(s=>`
+    <div class="card rar-${s.rar}${selTo && selTo.name===s.name ? " selected":""}" data-idx="${s.idx}">
+      <div class="rarity-dot"></div>
+      <div class="skin-ico">${s.ico}</div>
+      <div class="skin-name">${esc(s.name)}</div>
+      <div class="skin-price">${fmt(s.price)}</div>
+    </div>`).join("");
+  $$("#pool-grid .card[data-idx]").forEach(c=>{
+    c.addEventListener("click", ()=> selectTo(+c.dataset.idx));
+  });
+  const pt = $("#pool-total");
+  if(pt) pt.textContent = SKINS.length;
+}
+
+/* ---------- инвентарь ---------- */
+let invFilter = "all";
+function renderInv(){
+  const grid = $("#inv-grid");
+  if(!grid) return;
+  const list = DB.inv.filter(x => invFilter==="all" || x.rar===invFilter).slice().reverse();
+  grid.innerHTML = list.map(x=>skinCard(x,{selected: selFrom && selFrom.id===x.id})).join("");
+  $$("#inv-grid .card").forEach(c=>{
+    c.addEventListener("click", ()=> selectFrom(+c.dataset.id));
+  });
+  $("#inv-empty").hidden = DB.inv.length > 0;
+  const badge = $("#inv-badge");
+  if(badge) badge.textContent = `🎒 ${DB.inv.length} шт · ${fmt(invSum())}`;
+}
+
+/* ---------- кнопка спина ---------- */
+function updateSpinBtn(){
+  const btn = $("#spin-btn");
+  if(!btn) return;
+  if(spinning){ btn.disabled = true; btn.textContent = "Крутим..."; return; }
+  if(!selFrom || !selTo){
+    btn.disabled = true;
+    btn.textContent = !selFrom && !selTo ? "Выбери оба скина" : (!selFrom ? "Выбери свой скин ↓" : "Выбери цель в пуле ↓");
+    return;
+  }
+  btn.disabled = false;
+  btn.textContent = `Апгрейд ${chance}% · ${fmt(selFrom.price)} → ${fmt(selTo.price)}`;
+}
+
+/* ---------- СПИН: стрелка по колесу ---------- */
+function setNeedle(deg){
+  wheelAngle = ((deg % 360) + 360) % 360;
+  const n = $("#needle");
+  if(n) n.setAttribute("transform", `rotate(${wheelAngle} 150 150)`);
+}
+
+/* исход: выигрыш, если стрелка попала в зелёную зону [0°, chance*3.6°) от 12 часов по часовой */
+function angleWon(angle){
+  return angle < chance*3.6;
+}
+
+async function spin(){
+  if(!selFrom || !selTo || spinning) return;
+  spinning = true;
+  const wheelEl = $("#wheel");
+  if(wheelEl) wheelEl.classList.add("spinning");
+  updateSpinBtn();
+
+  /* --- честный исход: заранее решаем, куда должна упасть стрелка --- */
+  const win = Math.random()*100 < chance;
+  const zoneEnd = chance*3.6;                 // конец зелёной зоны
+  const finalAngle = win
+    ? Math.random() * (zoneEnd - 2) + 1       // внутри зоны (не на самой границе)
+    : zoneEnd + Math.random() * (360 - zoneEnd - 2) + 1;
+
+  /* --- анимация: 5-7 полных оборотов + доводка до finalAngle --- */
+  const turns = 5 + Math.floor(Math.random()*3);   // 5..7 оборотов
+  const startAngle = wheelAngle;
+  let normalizedStart = startAngle;
+  const targetAbsolute = turns*360 + finalAngle;
+  const delta = targetAbsolute - normalizedStart;
+
+  const DURATION = 4200;
+  const t0 = performance.now();
+
+  function easeOutQuint(t){ return 1 - Math.pow(1-t, 5); }
+
+  await new Promise(resolve=>{
+    function frame(now){
+      const t = Math.min(1, (now - t0)/DURATION);
+      const cur = normalizedStart + delta * easeOutQuint(t);
+      setNeedle(cur);
+      if(t < 1) requestAnimationFrame(frame);
+      else { setNeedle(finalAngle); resolve(); }
+    }
+    requestAnimationFrame(frame);
+  });
+
+  /* --- результат --- */
+  const wonFinal = angleWon(finalAngle);
+  const from = selFrom;
+  const targetDef = selTo;
+  const cardTo = $("#card-to");
+  if(cardTo) cardTo.classList.add(wonFinal ? "flash-win" : "flash-lose");
+
+  removeItem(from.id);
+  DB.stats.total++;
+  if(wonFinal){
+    DB.stats.wins++;
+    DB.stats.won += targetDef.price;
+    const got = addItem(targetDef);
+    addHistory(true, targetDef.price, from, targetDef);
+    renderInv();
+    showWin(got);
+  } else {
+    DB.stats.losses++;
+    DB.stats.lost += from.price;
+    addHistory(false, from.price, from, targetDef);
+    renderInv();
+    toast(`Апгрейд провален — ${from.name} потерян`,"err");
+  }
+  saveDB();
+
+  spinning = false;
+  if(wheelEl) wheelEl.classList.remove("spinning");
+  selFrom = null; selTo = null;
+  renderFrom(); renderTo(); renderPool(); updateSpinBtn();
+  renderInv();
+  setTimeout(()=>{ if(cardTo) cardTo.classList.remove("flash-win","flash-lose"); }, 2500);
+}
+
+function addHistory(win, price, from, to){
+  const h = $("#up-history");
+  if(!h) return;
+  const chip = document.createElement("div");
+  chip.className = "hist-chip " + (win?"won":"lost");
+  chip.innerHTML = `${win?"✅":"❌"} <span>${esc(from.name)}</span> <span class="hm">→</span> <span>${esc(to.name)}</span> <b>${fmt(price)}</b>`;
+  h.prepend(chip);
+  while(h.children.length > 6) h.lastChild.remove();
+}
+
+function showWin(item){
+  const m = $("#win-modal");
+  if(!m) return;
+  $("#win-card").innerHTML = skinCard(item);
+  m.hidden = false;
+}
+function closeWinModal(){ const m=$("#win-modal"); if(m) m.hidden = true; }
+
+/* ---------- мини-админ из игры ---------- */
+var ADMIN_PIN = "1337";
+
+function openAdminModal(){
+  const m = $("#admin-modal");
+  if(!m) return;
+  m.hidden = false;
+  $("#admin-pin").focus();
+}
+function closeAdminModal(){ const m=$("#admin-modal"); if(m) m.hidden = true; }
+function tryAdminLogin(){
+  const p = $("#admin-pin");
+  if(!p) return;
+  if(p.value === ADMIN_PIN){
+    closeAdminModal();
+    toast("Админ-режим: выдача скинов на стр. админа","ok");
+    setTimeout(()=>{ location.href = "admin.html"; }, 800);
+  } else {
+    toast("Неверный PIN","err");
+  }
+}
+
+/* ---------- фильтры инвентаря ---------- */
+function initFilters(){
+  $$(".inv-filter .btn").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      $$(".inv-filter .btn").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+      invFilter = b.dataset.rar;
+      renderInv();
+    });
+  });
+}
+
+/* ---------- boot ---------- */
+function boot(){
+  chanceUIInit();
+  initFilters();
+  renderFrom();
+  renderTo();
+  renderPool();
+  renderInv();
+  updateSpinBtn();
+  const sb = $("#spin-btn");
+  if(sb) sb.addEventListener("click", spin);
+}
+document.addEventListener("DOMContentLoaded", boot);
