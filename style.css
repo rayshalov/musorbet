@@ -299,9 +299,27 @@ h2{font-size:20px}
 .topbar-right{margin-left:auto;display:flex;gap:10px;align-items:center}
 
 @media (max-width:700px){
-  .topbar{flex-wrap:wrap;gap:12px;padding:12px 16px}
+  .topbar{flex-wrap:wrap;gap:10px;padding:10px 14px}
   .nav{order:3;width:100%;justify-content:center}
-  .upgrade-line{gap:20px}
-  .up-arrow{order:3}
+  .topbar-right{flex-wrap:wrap;justify-content:center;margin-left:auto}
+  .inv-badge{padding:7px 10px;font-size:12px}
+  .upgrade-stage{padding:22px 12px}
+  .page-upgrader main{padding:22px 10px 12px}
+  /* колесо сжимается под ширину экрана */
+  .wheel-wrap{width:min(340px,calc(100vw - 48px));height:auto;aspect-ratio:1}
+  .wheel-center{width:150px;height:150px}
+  .wc-mult{font-size:30px}
+  /* пресеты шанса переносятся на вторую строку */
+  .chance-presets{flex-wrap:wrap;row-gap:8px}
+  .preset{padding:6px 12px;font-size:12px}
+  .auto-toggle{margin-left:0}
+  .upgrade-line{gap:14px}
+  .up-item{width:100%;max-width:280px}
+  .to-arrow{padding-bottom:0;transform:rotate(90deg)}
+  .upgrade-line{flex-direction:column;align-items:center}
+  .hist-chip{max-width:100%;font-size:11px}
+  .inventory-section{padding:26px 12px 60px}
+  .inv-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+  .card{width:100%;height:auto;min-height:180px}
   .chance-nums b{font-size:20px}
 }
