@@ -66,6 +66,22 @@ const Sound = (() => {
     src.start(t);
   }
 
+  /* буфер щелчка рендерится один раз; каждый тик — один BufferSource.
+     Создание осцилляторов и фильтров на каждый тик давало микрофризы в Safari */
+  let tickBuf = null;
+  function tickBuffer(c){
+    if(tickBuf) return tickBuf;
+    const dur = 0.03;
+    const len = Math.max(1, Math.floor(c.sampleRate * dur));
+    tickBuf = c.createBuffer(1, len, c.sampleRate);
+    const d = tickBuf.getChannelData(0);
+    for(let i=0;i<len;i++){
+      const t = i/len;
+      d[i] = Math.sin(2*Math.PI*1750*(t*dur)) * (1-t)*(1-t) * 0.6;
+    }
+    return tickBuf;
+  }
+
   return {
     get enabled(){ return enabled; },
     toggle(){
@@ -85,16 +101,20 @@ const Sound = (() => {
       tone({freq:587, type:"sine", dur:0.16, peak:0.05, delay:0.08, lp:2400});
     },
     /* трещотка колеса; speed 0..1 — темп задаёт анимация.
-       Три тембра на выбор, все — чистые короткие тоны без шума (шум и давал «грязь»). */
+       Воспроизведение из прекэшированного буфера: один узел на щелчок */
     tick(speed=1){
-      const s = 0.03 + 0.025*speed;   // громкость щелчка растёт на быстрой фазе
-      if(tickStyle === "wood"){
-        tone({freq:1180, type:"sine", dur:0.035, peak:s, slide:880, lp:2200});
-      } else if(tickStyle === "soft"){
-        tone({freq:820, type:"sine", dur:0.05, peak:s*0.7, slide:660, lp:1300});
-      } else {                        // mech: сухой клик храповика
-        tone({freq:1950, type:"sine", dur:0.02, peak:s, slide:1500, lp:6000});
-      }
+      const c = ac(); if(!c) return;
+      const buf = tickBuffer(c);
+      const src = c.createBufferSource();
+      src.buffer = buf;
+      let base = 1750;                            // mech
+      if(tickStyle === "wood") base = 1150;
+      else if(tickStyle === "soft") base = 800;
+      src.playbackRate.value = (base/1750) * (0.88 + 0.24*speed);
+      const g = c.createGain();
+      g.gain.value = (tickStyle === "soft" ? 0.55 : 0.9) * (0.5 + 0.5*speed);
+      src.connect(g); g.connect(c.destination);
+      src.start();
     },
     get tickStyle(){ return tickStyle; },
     tickStyleName(){

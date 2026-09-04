@@ -162,11 +162,11 @@ h2{font-size:20px}
 .upgrade-stage{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:34px;box-shadow:var(--shadow);text-align:center}
 
 /* колесо */
-.wheel-wrap{position:relative;width:340px;height:340px;margin:0 auto 8px;user-select:none}
+.wheel-wrap{position:relative;width:340px;height:340px;margin:0 auto 8px;user-select:none;contain:layout style}
 .wheel{position:relative;width:100%;height:100%;cursor:grab;touch-action:none}
 .wheel.dragging{cursor:grabbing}
 .wheel.spinning{cursor:default}
-.wheel-svg{width:100%;height:100%;display:block;overflow:visible}
+.wheel-svg{width:100%;height:100%;display:block;overflow:hidden}
 .ticks{fill:none;stroke:#1f242c;stroke-width:8;stroke-dasharray:1 13.8;opacity:.9}
 .ring-track{fill:none;stroke:#14171d;stroke-width:18}
 /* свечение зоны — дублирующий широкий ход вместо SVG-фильтра (дешевле для repaint) */
@@ -174,7 +174,9 @@ h2{font-size:20px}
 .ring-win{fill:none;stroke:url(#wg);stroke-width:18}
 
 /* стрелка — HTML-слой поверх SVG (Safari композитит HTML-transform на GPU,
-   а SVG-transform перерисовывает весь SVG каждый кадр) */
+   а SVG-transform перерисовывает весь SVG каждый кадр).
+   Треугольники сделаны границами, без clip-path: Safari иногда
+   перерастеризует clip-path маску при повороте слоя — это дёргания */
 .needle{
   position:absolute;inset:0;
   transform-origin:50% 50%;
@@ -185,17 +187,19 @@ h2{font-size:20px}
 }
 /* мягкое свечение */
 .needle::before{
-  content:"";position:absolute;left:50%;top:2px;width:36px;height:64px;
-  transform:translateX(-50%);
-  background:rgba(242,227,189,.32);
-  clip-path:polygon(50% 0, 6% 100%, 50% 78%, 94% 100%);
+  content:"";position:absolute;left:50%;top:6px;width:0;height:0;
+  margin-left:-17px;
+  border-left:17px solid transparent;
+  border-right:17px solid transparent;
+  border-bottom:46px solid rgba(242,227,189,.30);
 }
 /* само остриё */
 .needle::after{
-  content:"";position:absolute;left:50%;top:12px;width:22px;height:40px;
-  transform:translateX(-50%);
-  background:#f2e3bd;
-  clip-path:polygon(50% 0, 14% 100%, 50% 80%, 86% 100%);
+  content:"";position:absolute;left:50%;top:14px;width:0;height:0;
+  margin-left:-10px;
+  border-left:10px solid transparent;
+  border-right:10px solid transparent;
+  border-bottom:32px solid #f2e3bd;
 }
 
 /* центр колеса */
