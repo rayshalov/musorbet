@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext y='19' font-size='19'%3E🥔%3C/text%3E%3C/svg%3E">
 <title>Upgrader — drennydrop</title>
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body class="page-upgrader">
 
@@ -56,13 +56,12 @@
 
           <!-- метки на границах зоны -->
           <g id="zone-marks"></g>
-
-          <!-- стрелка: вращение через CSS transform (GPU-слой), свечение — отдельный полигон -->
-          <g class="needle" id="needle">
-            <polygon class="needle-glow" points="150,6 137,58 150,47 163,58"/>
-            <polygon points="150,14 141,52 150,44 159,52"/>
-          </g>
         </svg>
+
+        <!-- стрелка: отдельный HTML-слой поверх SVG.
+             Safari не выносит SVG-элементы на GPU-слой, а HTML-элементы
+             с transform — выносит, поэтому стрелка больше не часть SVG -->
+        <div class="needle" id="needle"></div>
 
         <div class="wheel-center">
           <div class="wc-mult" id="up-mult">2.00×</div>
@@ -158,10 +157,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
-<script src="firebase-config.js?v=7" defer></script>
-<script src="cloud.js?v=7" defer></script>
-<script src="data.js?v=7"></script>
-<script src="sound.js?v=7"></script>
-<script src="app.js?v=7"></script>
+<script src="firebase-config.js?v=8" defer></script>
+<script src="cloud.js?v=8" defer></script>
+<script src="data.js?v=8"></script>
+<script src="sound.js?v=8"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>

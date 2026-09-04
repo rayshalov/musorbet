@@ -172,14 +172,30 @@ h2{font-size:20px}
 /* свечение зоны — дублирующий широкий ход вместо SVG-фильтра (дешевле для repaint) */
 .ring-win-glow{fill:none;stroke:url(#wg);stroke-width:32;opacity:.22}
 .ring-win{fill:none;stroke:url(#wg);stroke-width:18}
-/* стрелка: вращение через CSS transform — кадр уходит на GPU-слой,
-   SVG не перерисовывается целиком; will-change держит слой постоянно */
-.needle polygon{fill:#f2e3bd}
-.needle .needle-glow{fill:rgba(242,227,189,.32)}
+
+/* стрелка — HTML-слой поверх SVG (Safari композитит HTML-transform на GPU,
+   а SVG-transform перерисовывает весь SVG каждый кадр) */
 .needle{
-  transform-origin:150px 150px;
+  position:absolute;inset:0;
+  transform-origin:50% 50%;
   will-change:transform;
+  pointer-events:none;
+  z-index:1;
   transition:none;
+}
+/* мягкое свечение */
+.needle::before{
+  content:"";position:absolute;left:50%;top:2px;width:36px;height:64px;
+  transform:translateX(-50%);
+  background:rgba(242,227,189,.32);
+  clip-path:polygon(50% 0, 6% 100%, 50% 78%, 94% 100%);
+}
+/* само остриё */
+.needle::after{
+  content:"";position:absolute;left:50%;top:12px;width:22px;height:40px;
+  transform:translateX(-50%);
+  background:#f2e3bd;
+  clip-path:polygon(50% 0, 14% 100%, 50% 80%, 86% 100%);
 }
 
 /* центр колеса */

@@ -402,12 +402,13 @@ function updateSpinBtn(){
 }
 
 /* ---------- СПИН: стрелка по колесу ---------- */
+let needleEl = null;
 function setNeedle(deg){
   wheelAngle = ((deg % 360) + 360) % 360;
-  /* CSS transform вместо SVG-атрибута: кадр крутится на GPU-слое,
-     весь SVG не перерисовывается — это и убирает лаги анимации */
-  const n = $("#needle");
-  if(n) n.style.transform = `rotate(${wheelAngle}deg)`;
+  /* стрелка — HTML-слой поверх SVG: кадр крутится на GPU-слое (важно для Safari,
+     который не композитит SVG-элементы), весь SVG не перерисовывается */
+  if(!needleEl) needleEl = $("#needle");
+  if(needleEl) needleEl.style.transform = `rotate(${wheelAngle}deg)`;
 }
 
 /* исход: выигрыш, если стрелка попала в зону [0°, ch*3.6°) от 12 часов по часовой */
