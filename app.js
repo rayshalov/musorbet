@@ -122,15 +122,14 @@ function syncAutoToggle(){
 /* ---------- колесо: геометрия ---------- */
 const R = 120, C = 150, CIRC = 2*Math.PI*R;
 
-/* отрисовать зелёную зону игрока на кольце */
+/* отрисовать зону игрока на кольце (основная дуга + слой свечения) */
 function drawWheelZone(){
-  const arc = $("#win-arc");
-  if(!arc) return;
   const len = CIRC * chance/100;
-  arc.setAttribute("stroke-dasharray", `${len} ${CIRC}`);
-  // зона начинается сверху (12 часов): rotate(-90) уже в transform,
-  // поэтому dasharray "0 len rest" не нужен — начало дуги = 3 часа, повёрнуто на -90 → 12 часов, идёт по часовой.
-  // Начало зоны всегда вверху, длина = шанс.
+  const dash = `${len} ${CIRC}`;
+  const arc = $("#win-arc");
+  if(arc) arc.setAttribute("stroke-dasharray", dash);
+  const glow = $("#win-arc-glow");
+  if(glow) glow.setAttribute("stroke-dasharray", dash);
 }
 
 /* ---------- шанс: пресеты + драг по колесу ---------- */
@@ -405,8 +404,10 @@ function updateSpinBtn(){
 /* ---------- СПИН: стрелка по колесу ---------- */
 function setNeedle(deg){
   wheelAngle = ((deg % 360) + 360) % 360;
+  /* CSS transform вместо SVG-атрибута: кадр крутится на GPU-слое,
+     весь SVG не перерисовывается — это и убирает лаги анимации */
   const n = $("#needle");
-  if(n) n.setAttribute("transform", `rotate(${wheelAngle} 150 150)`);
+  if(n) n.style.transform = `rotate(${wheelAngle}deg)`;
 }
 
 /* исход: выигрыш, если стрелка попала в зону [0°, ch*3.6°) от 12 часов по часовой */

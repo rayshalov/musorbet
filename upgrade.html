@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext y='19' font-size='19'%3E🥔%3C/text%3E%3C/svg%3E">
 <title>Upgrader — drennydrop</title>
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body class="page-upgrader">
 
@@ -37,13 +37,6 @@
               <stop offset="0" stop-color="#e6c987"/>
               <stop offset="1" stop-color="#b98f47"/>
             </linearGradient>
-            <filter id="wglow" x="-40%" y="-40%" width="180%" height="180%">
-              <feGaussianBlur stdDeviation="6" result="b"/>
-              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-            <filter id="nglow" x="-60%" y="-60%" width="220%" height="220%">
-              <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#fff" flood-opacity="0.55"/>
-            </filter>
           </defs>
 
           <!-- деления по кругу -->
@@ -52,16 +45,22 @@
           <!-- серое кольцо (зона проигрыша) -->
           <circle class="ring-track" cx="150" cy="150" r="120"/>
 
-          <!-- зелёная зона игрока (старт с 12 часов, по часовой) -->
+          <!-- мягкое свечение зоны: широкий полупрозрачный ход вместо SVG-фильтра
+               (фильтр пересчитывался каждый кадр и вызывал лаги) -->
+          <circle class="ring-win-glow" id="win-arc-glow" cx="150" cy="150" r="120"
+                  transform="rotate(-90 150 150)"/>
+
+          <!-- зона игрока (старт с 12 часов, по часовой) -->
           <circle class="ring-win" id="win-arc" cx="150" cy="150" r="120"
-                  transform="rotate(-90 150 150)" filter="url(#wglow)"/>
+                  transform="rotate(-90 150 150)"/>
 
           <!-- метки на границах зоны -->
           <g id="zone-marks"></g>
 
-          <!-- стрелка -->
+          <!-- стрелка: вращение через CSS transform (GPU-слой), свечение — отдельный полигон -->
           <g class="needle" id="needle">
-            <polygon points="150,14 141,52 150,44 159,52" filter="url(#nglow)"/>
+            <polygon class="needle-glow" points="150,6 137,58 150,47 163,58"/>
+            <polygon points="150,14 141,52 150,44 159,52"/>
           </g>
         </svg>
 
@@ -159,10 +158,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
-<script src="firebase-config.js?v=6" defer></script>
-<script src="cloud.js?v=6" defer></script>
-<script src="data.js?v=6"></script>
-<script src="sound.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="firebase-config.js?v=7" defer></script>
+<script src="cloud.js?v=7" defer></script>
+<script src="data.js?v=7"></script>
+<script src="sound.js?v=7"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>
