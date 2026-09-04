@@ -50,7 +50,7 @@ function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&l
 /* картинка скина или эмодзи-заглушка (для кастомных скинов из админки) */
 function skinMedia(item){
   return item.img
-    ? `<img class="skin-img" src="${esc(item.img)}" alt="" draggable="false" loading="lazy">`
+    ? `<img class="skin-img" src="${esc(item.img)}" alt="" draggable="false" loading="lazy" decoding="async">`
     : (item.ico||"🔫");
 }
 
@@ -326,12 +326,32 @@ function renderPool(){
       .filter(s => s.price >= w.lo && s.price <= w.hi)
       .sort((a,b)=> Math.abs(a.price-T) - Math.abs(b.price-T));
     if(!list.length){
-      grid.innerHTML = `<div class="card locked rar-blue"><div class="card-empty">Нет подходящих целей.<br>Измени шанс или скин.</div></div>`;
+      if(grid.dataset.lsig !== "empty"){
+        grid.dataset.lsig = "empty";
+        grid.innerHTML = `<div class="card locked rar-blue"><div class="card-empty">Нет подходящих целей.<br>Измени шанс или скин.</div></div>`;
+      }
       return;
     }
   } else {
     list = SKINS.map((s,i)=>({...s, idx:i})).sort((a,b)=>a.price-b.price);
   }
+
+  /* не пересобираем DOM без необходимости — перетаскивание колеса на каждый кадр
+     перестраивало 48 карточек (с перезагрузкой картинок) и лагало */
+  const listSig = list.map(s=>s.idx).join(",");
+  const selName = selTo ? selTo.name : "";
+  if(grid.dataset.lsig === listSig){
+    if(grid.dataset.ssig !== selName){          // состав тот же — переключаем только выделение
+      grid.dataset.ssig = selName;
+      $$("#pool-grid .card[data-idx]").forEach(c=>{
+        const s = list.find(x=>x.idx === +c.dataset.idx);
+        c.classList.toggle("selected", !!(selTo && s && selTo.name === s.name));
+      });
+    }
+    return;
+  }
+  grid.dataset.lsig = listSig;
+  grid.dataset.ssig = selName;
 
   grid.innerHTML = list.map(s=>`
     <div class="card rar-${s.rar}${selTo && selTo.name===s.name ? " selected":""}" data-idx="${s.idx}">

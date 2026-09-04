@@ -35,9 +35,9 @@ h2{font-size:20px}
 /* ---- topbar ---- */
 .topbar{
   display:flex;align-items:center;gap:28px;
-  padding:14px 28px;background:rgba(11,14,20,.85);
+  padding:14px 28px;background:rgba(7,8,10,.96);
   border-bottom:1px solid var(--line);
-  position:sticky;top:0;backdrop-filter:blur(12px);z-index:50;
+  position:sticky;top:0;z-index:50;
 }
 .logo{font-size:20px;font-weight:800;letter-spacing:.5px;display:flex;align-items:center;gap:9px;text-transform:lowercase}
 .logo b{color:var(--gold);font-weight:800}
@@ -133,9 +133,14 @@ h2{font-size:20px}
   background:var(--rar);box-shadow:0 0 8px var(--rar);
 }
 .card .skin-ico{font-size:44px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5));margin-bottom:8px;line-height:1}
+/* тень на картинках только на крупных карточках стейга и в модалке:
+   drop-shadow в сетках на 48 картинок заметно просаживает прокрутку */
+.upgrade-stage .skin-ico .skin-img,
+#win-card .skin-ico .skin-img{
+  filter:drop-shadow(0 6px 10px rgba(0,0,0,.55));
+}
 .card .skin-ico .skin-img{
   width:118px;max-width:100%;height:auto;display:block;margin:0 auto;
-  filter:drop-shadow(0 6px 10px rgba(0,0,0,.55));
   transition:transform .2s;
 }
 .card:hover .skin-ico .skin-img{transform:scale(1.06) rotate(-3deg)}
@@ -164,7 +169,7 @@ h2{font-size:20px}
 .wheel-svg{width:100%;height:100%;display:block;overflow:visible}
 .ticks{fill:none;stroke:#1f242c;stroke-width:8;stroke-dasharray:1 13.8;opacity:.9}
 .ring-track{fill:none;stroke:#14171d;stroke-width:18}
-.ring-win{fill:none;stroke:url(#wg);stroke-width:18;transition:stroke-dasharray .25s ease}
+.ring-win{fill:none;stroke:url(#wg);stroke-width:18}
 .needle polygon{fill:#f2e3bd}
 .needle{transition:none;filter:drop-shadow(0 0 6px rgba(242,227,189,.55))}
 
