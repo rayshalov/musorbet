@@ -148,6 +148,7 @@ function angleFromEvent(e, el){
 function chanceUIInit(){
   $$(".preset[data-c]").forEach(b=>{
     b.addEventListener("click", ()=>{
+      if(spinning) return;               // во время прокрута шанс менять нельзя
       Sound.click();
       chance = +b.dataset.c;
       syncChance({resetTarget:true});
@@ -159,6 +160,7 @@ function chanceUIInit(){
   const auto = $("#auto-toggle");
   if(auto){
     auto.addEventListener("click", ()=>{
+      if(spinning) return;               // во время прокрута цель подменять нельзя
       Sound.click();
       autoPick = !autoPick;
       syncAutoToggle();
@@ -403,22 +405,27 @@ function setNeedle(deg){
   if(n) n.setAttribute("transform", `rotate(${wheelAngle} 150 150)`);
 }
 
-/* исход: выигрыш, если стрелка попала в зелёную зону [0°, chance*3.6°) от 12 часов по часовой */
-function angleWon(angle){
-  return angle < chance*3.6;
+/* исход: выигрыш, если стрелка попала в зону [0°, ch*3.6°) от 12 часов по часовой */
+function angleWon(angle, ch){
+  return angle < ch*3.6;
 }
 
 async function spin(){
   if(!selFrom || !selTo || spinning) return;
   spinning = true;
+  /* фиксируем все параметры на момент ставки — изменения интерфейса
+     во время прокрута не должны влиять на исход */
+  const from = selFrom;
+  const targetDef = selTo;
+  const spinChance = chance;
   const wheelEl = $("#wheel");
   if(wheelEl) wheelEl.classList.add("spinning");
   updateSpinBtn();
   Sound.launch();
 
   /* --- честный исход: заранее решаем, куда должна упасть стрелка --- */
-  const win = Math.random()*100 < chance;
-  const zoneEnd = chance*3.6;                 // конец зелёной зоны
+  const win = Math.random()*100 < spinChance;
+  const zoneEnd = spinChance*3.6;             // конец зелёной зоны
   const finalAngle = win
     ? Math.random() * (zoneEnd - 2) + 1       // внутри зоны (не на самой границе)
     : zoneEnd + Math.random() * (360 - zoneEnd - 2) + 1;
@@ -456,10 +463,8 @@ async function spin(){
     requestAnimationFrame(frame);
   });
 
-  /* --- результат --- */
-  const wonFinal = angleWon(finalAngle);
-  const from = selFrom;
-  const targetDef = selTo;
+  /* --- результат: по зафиксированным на старте значениям --- */
+  const wonFinal = angleWon(finalAngle, spinChance);
   const cardTo = $("#card-to");
   if(cardTo) cardTo.classList.add(wonFinal ? "flash-win" : "flash-lose");
 
