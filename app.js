@@ -6,7 +6,17 @@ const DB_KEY = "fragdrop_db_v1";
 function loadDB(){
   try{
     const raw = localStorage.getItem(DB_KEY);
-    if(raw) return JSON.parse(raw);
+    if(raw){
+      const db = JSON.parse(raw);
+      /* миграция: у скинов, выданных до добавления картинок, нет img — подтягиваем из каталога по имени */
+      (db.inv||[]).forEach(x=>{
+        if(!x.img){
+          const def = SKINS.find(s=>s.name===x.name);
+          if(def){ x.img = def.img; x.rar = def.rar; }
+        }
+      });
+      return db;
+    }
   }catch(e){}
   return { inv:[], stats:{ total:0, wins:0, losses:0, won:0, lost:0 }, uid:1 };
 }
