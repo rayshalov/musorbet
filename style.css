@@ -305,8 +305,8 @@ h2{font-size:20px}
   .inv-badge{padding:7px 10px;font-size:12px}
   .upgrade-stage{padding:22px 12px}
   .page-upgrader main{padding:22px 10px 12px}
-  /* колесо сжимается под ширину экрана */
-  .wheel-wrap{width:min(340px,calc(100vw - 48px));height:auto;aspect-ratio:1}
+  /* колесо сжимается под ширину экрана (высота отдельной формулой — для старых iOS без aspect-ratio) */
+  .wheel-wrap{width:min(340px,calc(100vw - 48px));height:min(340px,calc(100vw - 48px))}
   .wheel-center{width:150px;height:150px}
   .wc-mult{font-size:30px}
   /* пресеты шанса переносятся на вторую строку */
