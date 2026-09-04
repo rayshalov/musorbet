@@ -17,6 +17,8 @@
   </nav>
   <div class="topbar-right">
     <div class="inv-badge" id="inv-badge">🎒 0 шт · $0.00</div>
+    <button class="btn btn-admin" id="sound-toggle" onclick="toggleSound()" title="Звук вкл/выкл">🔊</button>
+    <button class="btn btn-admin" onclick="cycleTickSound()" title="Сменить тембр трещотки колеса">🎚</button>
     <button class="btn btn-admin" onclick="openAdminModal()">Admin</button>
   </div>
 </header>
@@ -154,6 +156,7 @@
 </div>
 
 <script src="data.js"></script>
+<script src="sound.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

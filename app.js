@@ -148,6 +148,7 @@ function angleFromEvent(e, el){
 function chanceUIInit(){
   $$(".preset[data-c]").forEach(b=>{
     b.addEventListener("click", ()=>{
+      Sound.click();
       chance = +b.dataset.c;
       syncChance({resetTarget:true});
       syncPresets();
@@ -158,6 +159,7 @@ function chanceUIInit(){
   const auto = $("#auto-toggle");
   if(auto){
     auto.addEventListener("click", ()=>{
+      Sound.click();
       autoPick = !autoPick;
       syncAutoToggle();
       if(autoPick && selFrom){
@@ -246,6 +248,7 @@ function selectFrom(id){
   if(spinning) return;
   const item = DB.inv.find(x=>x.id===id);
   if(!item) return;
+  Sound.select();
   if(selFrom && selFrom.id === id){           // повторный клик — снять выбор
     selFrom = null; selTo = null;
   } else {
@@ -282,6 +285,7 @@ function selectTo(idx){
   else if(def.price <= selFrom.price*1.05){ toast("Цель должна быть дороже твоего скина","err"); return; }
   else if(fairChance(selFrom.price, def.price) < 5){ toast("Слишком дорогая цель для этого скина","err"); return; }
   else {
+    Sound.select();
     autoPick = false;                              // ручной выбор отключает автоподбор
     syncAutoToggle();
     selTo = def;
@@ -390,6 +394,7 @@ async function spin(){
   const wheelEl = $("#wheel");
   if(wheelEl) wheelEl.classList.add("spinning");
   updateSpinBtn();
+  Sound.launch();
 
   /* --- честный исход: заранее решаем, куда должна упасть стрелка --- */
   const win = Math.random()*100 < chance;
@@ -407,6 +412,8 @@ async function spin(){
 
   const DURATION = 4200;
   const t0 = performance.now();
+  let lastTickAngle = startAngle;              // для звука трещотки
+  let lastTickTime = 0;
 
   function easeOutQuint(t){ return 1 - Math.pow(1-t, 5); }
 
@@ -414,6 +421,14 @@ async function spin(){
     function frame(now){
       const t = Math.min(1, (now - t0)/DURATION);
       const cur = normalizedStart + delta * easeOutQuint(t);
+      /* трещотка: ритм зависит от фазы вращения —
+         в первую секунду щедро (~60мс), к остановке лениво (~300мс) */
+      const minGap = 60 + 260 * Math.pow(t, 1.5);
+      if(Math.abs(cur - lastTickAngle) >= 18 && now - lastTickTime >= minGap){
+        lastTickAngle = cur;
+        lastTickTime = now;
+        Sound.tick(1 - t);
+      }
       setNeedle(cur);
       if(t < 1) requestAnimationFrame(frame);
       else { setNeedle(finalAngle); resolve(); }
@@ -433,6 +448,7 @@ async function spin(){
   if(wonFinal){
     DB.stats.wins++;
     DB.stats.won += targetDef.price;
+    Sound.win();
     const got = addItem(targetDef);
     addHistory(true, targetDef.price, from, targetDef);
     renderInv();
@@ -440,6 +456,7 @@ async function spin(){
   } else {
     DB.stats.losses++;
     DB.stats.lost += from.price;
+    Sound.lose();
     addHistory(false, from.price, from, targetDef);
     renderInv();
     toast(`Апгрейд провален — ${from.name} потерян`,"err");
@@ -509,7 +526,10 @@ function initFilters(){
 /* ---------- boot ---------- */
 function boot(){
   chanceUIInit();
+  drawWheelZone();   // без этого при загрузке колесо показывает 100% зону до первого клика по шансу
   initFilters();
+  const st = $("#sound-toggle");
+  if(st) st.textContent = Sound.enabled ? "🔊" : "🔇";
   renderFrom();
   renderTo();
   renderPool();
