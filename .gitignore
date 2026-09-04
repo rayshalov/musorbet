@@ -1,0 +1,6 @@
+# локальный пин админа (не публикуется)
+admin-pin.js
+
+# мусор
+.DS_Store
+node_modules/

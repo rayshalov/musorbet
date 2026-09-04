@@ -1,6 +1,7 @@
 /* ===== drennydrop — админ-панель ===== */
 
-ADMIN_PIN = "1337"; // ← PIN (смени при желании)
+/* PIN задаётся хешем ADMIN_PIN_HASH в app.js (инструкция рядом с ним).
+   Локально можно создать файл admin-pin.js со строкой var ADMIN_PIN="..." — он в .gitignore. */
 
 const ADB_KEY = "fragdrop_admin_v1";
 
@@ -10,17 +11,19 @@ function adminAuthed(){
 function tryAdminLogin(){
   const input = $("#pin-input") || $("#admin-pin");
   if(!input) return;
-  if(input.value === ADMIN_PIN){
-    try{ sessionStorage.setItem(ADB_KEY,"1"); }catch(e){}
-    const err = $("#pin-error"); if(err) err.hidden = true;
-    input.value = "";
-    showPanel();
-    if($("#admin-modal")) closeAdminModal();
-    toast("Добро пожаловать, админ!","ok");
-  } else {
-    const err = $("#pin-error");
-    if(err) err.hidden = false; else toast("Неверный PIN","err");
-  }
+  checkAdminPin(input.value).then(ok=>{
+    if(ok){
+      try{ sessionStorage.setItem(ADB_KEY,"1"); }catch(e){}
+      const err = $("#pin-error"); if(err) err.hidden = true;
+      input.value = "";
+      showPanel();
+      if($("#admin-modal")) closeAdminModal();
+      toast("Добро пожаловать, админ!","ok");
+    } else {
+      const err = $("#pin-error");
+      if(err) err.hidden = false; else toast("Неверный PIN","err");
+    }
+  });
 }
 
 function showPanel(){

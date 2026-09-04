@@ -527,7 +527,26 @@ function showWin(item){
 function closeWinModal(){ const m=$("#win-modal"); if(m) m.hidden = true; }
 
 /* ---------- мини-админ из игры ---------- */
-var ADMIN_PIN = "1337";
+/* PIN хранится только как SHA-256 хеш — в репе и в коде сайта его нет.
+   Смена PIN: на https-странице сайта открой консоль (F12) и выполни
+     const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("новыйПИН"));
+     [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("")
+   и вставь полученную строку в ADMIN_PIN_HASH.
+   Локальный вариант: создай файл admin-pin.js (он в .gitignore) со строкой
+     var ADMIN_PIN = "твойПИН";
+   и подключи его в admin.html/upgrade.html — в репу он не попадёт. */
+var ADMIN_PIN_HASH = "acc2c51a6cd1b067523df47e10a263c678dcd59b76aa31446fc764c104595553";
+
+async function sha256hex(text){
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+/* локальный override (admin-pin.js) или хеш */
+async function checkAdminPin(text){
+  if(typeof ADMIN_PIN !== "undefined" && ADMIN_PIN === text) return true;
+  try{ return await sha256hex(text) === ADMIN_PIN_HASH; }catch(e){ return false; }
+}
 
 function openAdminModal(){
   const m = $("#admin-modal");
@@ -539,13 +558,15 @@ function closeAdminModal(){ const m=$("#admin-modal"); if(m) m.hidden = true; }
 function tryAdminLogin(){
   const p = $("#admin-pin");
   if(!p) return;
-  if(p.value === ADMIN_PIN){
-    closeAdminModal();
-    toast("Админ-режим: выдача скинов на стр. админа","ok");
-    setTimeout(()=>{ location.href = "admin.html"; }, 800);
-  } else {
-    toast("Неверный PIN","err");
-  }
+  checkAdminPin(p.value).then(ok=>{
+    if(ok){
+      closeAdminModal();
+      toast("Админ-режим: выдача скинов на стр. админа","ok");
+      setTimeout(()=>{ location.href = "admin.html"; }, 800);
+    } else {
+      toast("Неверный PIN","err");
+    }
+  });
 }
 
 /* ---------- фильтры инвентаря ---------- */
