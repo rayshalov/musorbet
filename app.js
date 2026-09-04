@@ -16,7 +16,7 @@ let DB = loadDB();
 function nextId(){ return DB.uid++; }
 
 function addItem(skinDef){
-  const item = { id: nextId(), name: skinDef.name, price: skinDef.price, rar: skinDef.rar, ico: skinDef.ico };
+  const item = { id: nextId(), name: skinDef.name, price: skinDef.price, rar: skinDef.rar, ico: skinDef.ico, img: skinDef.img };
   DB.inv.push(item);
   saveDB();
   return item;
@@ -37,12 +37,19 @@ const $$ = s => document.querySelectorAll(s);
 
 function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+/* картинка скина или эмодзи-заглушка (для кастомных скинов из админки) */
+function skinMedia(item){
+  return item.img
+    ? `<img class="skin-img" src="${esc(item.img)}" alt="" draggable="false" loading="lazy">`
+    : (item.ico||"🔫");
+}
+
 function skinCard(item, opts={}){
   const cls = ["card","rar-"+item.rar];
   if(opts.selected) cls.push("selected");
   return `<div class="${cls.join(" ")}" data-id="${item.id}">
     <div class="rarity-dot"></div>
-    <div class="skin-ico">${item.ico||"🔫"}</div>
+    <div class="skin-ico">${skinMedia(item)}</div>
     <div class="skin-name">${esc(item.name)}</div>
     <div class="skin-price">${fmt(item.price)}</div>
   </div>`;
@@ -63,6 +70,7 @@ let selTo = null;     // цель из каталога (награда)
 let spinning = false;
 let chance = 50;
 let wheelAngle = 0;   // текущий угол стрелки (градусы)
+let autoPick = true;  // автоподбор цели под выбранный шанс
 
 /* окно допустимых цен цели: [T*0.45 .. T*1.3], где T = ставка × множитель */
 function targetWindow(){
@@ -72,6 +80,29 @@ function targetWindow(){
 }
 function fairChance(fromPrice, toPrice){
   return Math.max(5, Math.min(95, Math.floor(fromPrice/toPrice*100)));
+}
+
+/* автоподбор: цель из окна допустимых, ближайшая по цене к T = ставка × множитель */
+function autoPickTarget(){
+  if(!selFrom) return null;
+  const w = targetWindow();
+  const T = selFrom.price * (100/chance);
+  const cands = SKINS.filter(s => s.price >= w.lo && s.price <= w.hi);
+  if(!cands.length) return null;
+  return cands.reduce((a,b)=> Math.abs(a.price-T) <= Math.abs(b.price-T) ? a : b);
+}
+
+function applyAutoPick(){
+  if(!autoPick || !selFrom) return false;
+  const best = autoPickTarget();
+  selTo = best;
+  renderTo(); renderPool();
+  return !!best;
+}
+
+function syncAutoToggle(){
+  const t = $("#auto-toggle");
+  if(t) t.classList.toggle("active", autoPick);
 }
 
 /* ---------- колесо: геометрия ---------- */
@@ -90,7 +121,7 @@ function drawWheelZone(){
 
 /* ---------- шанс: пресеты + драг по колесу ---------- */
 function syncPresets(){
-  $$(".preset").forEach(b=>{
+  $$(".preset[data-c]").forEach(b=>{
     b.classList.toggle("active", +b.dataset.c === chance);
   });
 }
@@ -105,13 +136,28 @@ function angleFromEvent(e, el){
 }
 
 function chanceUIInit(){
-  $$(".preset").forEach(b=>{
+  $$(".preset[data-c]").forEach(b=>{
     b.addEventListener("click", ()=>{
       chance = +b.dataset.c;
       syncChance({resetTarget:true});
       syncPresets();
     });
   });
+
+  /* тумблер автоподбора цели */
+  const auto = $("#auto-toggle");
+  if(auto){
+    auto.addEventListener("click", ()=>{
+      autoPick = !autoPick;
+      syncAutoToggle();
+      if(autoPick && selFrom){
+        if(!applyAutoPick()){
+          toast("Под этот шанс нет подходящей цели — измени шанс или скин","err");
+        }
+        updateSpinBtn();
+      }
+    });
+  }
 
   /* драг по кольцу: тянешь — изменяешь размер зоны */
   const wheelEl = $("#wheel");
@@ -171,8 +217,10 @@ function syncChance(opts={}){
   cv.className = chance >= 60 ? "c-green" : (chance >= 30 ? "c-gold" : "c-red");
   syncPresets();
 
-  // цель могла выйти за окно — сбрасываем
-  if(opts.resetTarget && selTo){
+  // при смене шанса: авто-подбор новой цели или сброс вышедшей за окно
+  if(opts.resetTarget && selFrom && autoPick){
+    applyAutoPick();
+  } else if(opts.resetTarget && selTo){
     const w = targetWindow();
     if(selTo.price < w.lo || selTo.price > w.hi){
       selTo = null;
@@ -192,7 +240,9 @@ function selectFrom(id){
     selFrom = null; selTo = null;
   } else {
     selFrom = item;
-    if(selTo && (selTo.price <= item.price*1.05 || fairChance(item.price, selTo.price) < 5)){
+    if(autoPick){
+      applyAutoPick();                        // сразу подбираем цель под текущий шанс
+    } else if(selTo && (selTo.price <= item.price*1.05 || fairChance(item.price, selTo.price) < 5)){
       selTo = null;
       toast("Эта цель не подходит для нового скина","err");
     }
@@ -205,7 +255,7 @@ function renderFrom(){
   if(!box) return;
   if(selFrom){
     box.className = "card rar-"+selFrom.rar;
-    box.innerHTML = `<div class="rarity-dot"></div><div class="skin-ico">${selFrom.ico}</div><div class="skin-name">${esc(selFrom.name)}</div><div class="skin-price">${fmt(selFrom.price)}</div>`;
+    box.innerHTML = `<div class="rarity-dot"></div><div class="skin-ico">${skinMedia(selFrom)}</div><div class="skin-name">${esc(selFrom.name)}</div><div class="skin-price">${fmt(selFrom.price)}</div>`;
   } else {
     box.className = "card locked";
     box.innerHTML = `<div class="card-empty">Выбери скин<br>из инвентаря ↓</div>`;
@@ -222,6 +272,8 @@ function selectTo(idx){
   else if(def.price <= selFrom.price*1.05){ toast("Цель должна быть дороже твоего скина","err"); return; }
   else if(fairChance(selFrom.price, def.price) < 5){ toast("Слишком дорогая цель для этого скина","err"); return; }
   else {
+    autoPick = false;                              // ручной выбор отключает автоподбор
+    syncAutoToggle();
     selTo = def;
     chance = fairChance(selFrom.price, def.price);   // честный шанс из цен
     const slider = $("#chance-slider");
@@ -236,7 +288,7 @@ function renderTo(){
   if(!box) return;
   if(selTo){
     box.className = "card rar-"+selTo.rar;
-    box.innerHTML = `<div class="rarity-dot"></div><div class="skin-ico">${selTo.ico}</div><div class="skin-name">${esc(selTo.name)}</div><div class="skin-price">${fmt(selTo.price)}</div>`;
+    box.innerHTML = `<div class="rarity-dot"></div><div class="skin-ico">${skinMedia(selTo)}</div><div class="skin-name">${esc(selTo.name)}</div><div class="skin-price">${fmt(selTo.price)}</div>`;
   } else if(selFrom){
     const T = selFrom.price * (100/chance);
     box.className = "card locked";
@@ -270,7 +322,7 @@ function renderPool(){
   grid.innerHTML = list.map(s=>`
     <div class="card rar-${s.rar}${selTo && selTo.name===s.name ? " selected":""}" data-idx="${s.idx}">
       <div class="rarity-dot"></div>
-      <div class="skin-ico">${s.ico}</div>
+      <div class="skin-ico">${skinMedia(s)}</div>
       <div class="skin-name">${esc(s.name)}</div>
       <div class="skin-price">${fmt(s.price)}</div>
     </div>`).join("");
