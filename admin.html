@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext y='19' font-size='19'%3E🥔%3C/text%3E%3C/svg%3E">
 <title>Admin — drennydrop</title>
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body class="page-admin">
 
@@ -39,6 +39,7 @@
     <!-- Статистика -->
     <div class="admin-card stats-card">
       <h3>Статистика</h3>
+      <p class="muted small" id="stats-badge" hidden>☁ глобальная — по всем игрокам, обновляется вживую</p>
       <div class="stat-row"><span>Всего апгрейдов</span><b id="st-total">0</b></div>
       <div class="stat-row"><span>Побед</span><b class="c-green" id="st-wins">0</b></div>
       <div class="stat-row"><span>Поражений</span><b class="c-red" id="st-losses">0</b></div>
@@ -46,6 +47,7 @@
       <div class="stat-row"><span>Объём инвентаря</span><b class="c-gold" id="st-invsum">$0</b></div>
       <div class="stat-row"><span>Всего выиграно</span><b class="c-green" id="st-won">$0</b></div>
       <div class="stat-row"><span>Всего потеряно</span><b class="c-red" id="st-lost">$0</b></div>
+      <div class="stat-row"><span>Игроков в базе</span><b id="st-players">—</b></div>
     </div>
 
     <!-- Быстрая выдача -->
@@ -118,9 +120,14 @@
 
 </main>
 
-<script src="data.js?v=3"></script>
-<script src="sound.js?v=3"></script>
-<script src="app.js?v=3"></script>
-<script src="admin.js?v=3"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
+<script src="firebase-config.js?v=4" defer></script>
+<script src="cloud.js?v=4" defer></script>
+<script src="data.js?v=4"></script>
+<script src="sound.js?v=4"></script>
+<script src="app.js?v=4"></script>
+<script src="admin.js?v=4"></script>
 </body>
 </html>

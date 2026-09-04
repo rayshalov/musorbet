@@ -29,6 +29,32 @@ function showPanel(){
   renderAdminStats();
   renderAdminInv();
   fillExactSelect();
+  watchCloudStats();
+}
+
+/* при включённом Firebase показываем живую глобальную статистику всех игроков */
+let cloudWatchStarted = false;
+function watchCloudStats(){
+  if(!Cloud.enabled || cloudWatchStarted) return;
+  const start = () => {
+    if(cloudWatchStarted) return;
+    cloudWatchStarted = true;
+    Cloud.watchGlobal(s=>{
+      $("#st-total").textContent  = s.total  || 0;
+      $("#st-wins").textContent   = s.wins   || 0;
+      $("#st-losses").textContent = s.losses || 0;
+      $("#st-won").textContent    = fmt(s.won  || 0);
+      $("#st-lost").textContent   = fmt(s.lost || 0);
+      const badge = $("#stats-badge");
+      if(badge) badge.hidden = false;
+    });
+    Cloud.playerCount().then(n=>{
+      const el = $("#st-players");
+      if(el && n != null) el.textContent = n;
+    });
+  };
+  if(Cloud.ready) start();
+  else setTimeout(start, 1500);   // ждём анонимный вход в облако
 }
 
 function closeAdminModal(){ const m=$("#admin-modal"); if(m) m.hidden = true; }
@@ -120,9 +146,9 @@ function grantBulk(type){
 
 /* ---------- свой скин ---------- */
 function createCustomSkin(){
-  const name = $("#cs-name").value.trim();
+  const name = $("#cs-name").value.trim().slice(0, 64);          // лимиты = правила Firestore
   const rar = $("#cs-rar").value;
-  const price = Math.max(0.01, +$("#cs-price").value || 1);
+  const price = Math.min(9800, Math.max(0.01, +$("#cs-price").value || 1));
   if(!name){ toast("Введи название скина","err"); return; }
   addItem({ name, price, rar, ico:"✨" });
   $("#cs-name").value = ""; $("#cs-price").value = "";
@@ -139,19 +165,28 @@ function clearInv(){
 }
 
 function resetStats(){
-  if(!confirm("Сбросить статистику апгрейдов?")) return;
+  const cloudNote = Cloud.enabled
+    ? "\n\nГлобальная облачная статистика правилами защищена от обнуления клиентом — сбрасывай её через консоль Firebase (Firestore → stats/global)."
+    : "";
+  if(!confirm("Сбросить статистику апгрейдов?" + cloudNote)) return;
   DB.stats = { total:0, wins:0, losses:0, won:0, lost:0 };
   saveDB(); renderAdminStats();
-  toast("Статистика сброшена","ok");
+  toast("Локальная статистика сброшена","ok");
 }
 
 function wipeAll(){
-  if(!confirm("ВАЙП: удалить инвентарь, статистику и всё-всё?")) return;
+  if(!confirm("ВАЙП: удалить инвентарь и статистику этого браузера?")) return;
   if(!confirm("Точно-точно? Отменить будет нельзя.")) return;
   localStorage.removeItem("fragdrop_db_v1");
   DB = loadDB();
   renderAdminInv(); renderAdminStats();
-  toast("Всё уничтожено. Начинаем с нуля.","err");
+  if(Cloud.enabled){
+    // облачные данные правилами защищены: инвентари игроков и статистика
+    // удаляются только вручную через консоль Firebase
+    toast("Облачные данные защищены правилами — чисти через консоль Firebase","err");
+  } else {
+    toast("Всё уничтожено. Начинаем с нуля.","err");
+  }
 }
 
 /* ---------- boot ---------- */

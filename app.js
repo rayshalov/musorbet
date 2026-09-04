@@ -20,7 +20,11 @@ function loadDB(){
   }catch(e){}
   return { inv:[], stats:{ total:0, wins:0, losses:0, won:0, lost:0 }, uid:1 };
 }
-function saveDB(){ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
+function saveDB(){
+  try{ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }catch(e){}
+  /* любое изменение инвентаря (в т.ч. выдача из админки) уходит в облако, если оно подключено */
+  if(window.Cloud) Cloud.queuePush();
+}
 let DB = loadDB();
 
 function nextId(){ return DB.uid++; }
@@ -486,7 +490,15 @@ async function spin(){
     renderInv();
     toast(`Апгрейд провален — ${from.name} потерян`,"err");
   }
-  saveDB();
+  /* локальное сохранение + атомарные инкременты глобальной статистики в облако
+     (если Firebase подключен; иначе это просто saveDB) */
+  Cloud.bumpStats({
+    total: 1,
+    wins:   wonFinal ? 1 : 0,
+    losses: wonFinal ? 0 : 1,
+    won:    wonFinal ? targetDef.price : 0,
+    lost:   wonFinal ? 0 : from.price
+  });
 
   spinning = false;
   if(wheelEl) wheelEl.classList.remove("spinning");
@@ -549,18 +561,22 @@ function initFilters(){
 }
 
 /* ---------- boot ---------- */
+function renderAll(){
+  renderFrom(); renderTo(); renderPool(); renderInv(); updateSpinBtn();
+}
+
 function boot(){
   chanceUIInit();
   drawWheelZone();   // без этого при загрузке колесо показывает 100% зону до первого клика по шансу
   initFilters();
   const st = $("#sound-toggle");
   if(st) st.textContent = Sound.enabled ? "🔊" : "🔇";
-  renderFrom();
-  renderTo();
-  renderPool();
-  renderInv();
-  updateSpinBtn();
+  renderAll();
   const sb = $("#spin-btn");
   if(sb) sb.addEventListener("click", spin);
+
+  /* облачная синхронизация: когда подтянется инвентарь из Firebase — перерисовать */
+  Cloud.init();
+  Cloud.on("synced", renderAll);
 }
 document.addEventListener("DOMContentLoaded", boot);
