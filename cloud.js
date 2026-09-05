@@ -32,11 +32,13 @@ const Cloud = (() => {
     }
   }
 
-  /* при загрузке: облако главнее — подтягиваем инвентарь, иначе выгружаем локальный */
+  /* при загрузке: облако главнее — подтягиваем инвентарь и баланс, иначе выгружаем локальные */
   async function pull(){
     const snap = await db.collection("users").doc(uid).get();
-    if(snap.exists && Array.isArray((snap.data()||{}).inv)){
-      DB.inv = snap.data().inv || [];
+    const d = snap.exists ? (snap.data()||{}) : null;
+    if(d && Array.isArray(d.inv)){
+      DB.inv = d.inv || [];
+      if(typeof d.balance === "number" && isFinite(d.balance)) DB.balance = d.balance;
       try{ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }catch(e){}
     } else {
       await pushNow();
@@ -52,7 +54,7 @@ const Cloud = (() => {
   async function pushNow(){
     if(!ready) return;
     await db.collection("users").doc(uid).set(
-      { inv: DB.inv, lastSeen: Date.now() },
+      { inv: DB.inv, balance: DB.balance, lastSeen: Date.now() },
       { merge: true }
     );
   }
@@ -72,7 +74,7 @@ const Cloud = (() => {
         lost:   firebase.firestore.FieldValue.increment(delta.lost   || 0)
       }, { merge: true });
       batch.set(db.collection("users").doc(uid),
-        { inv: DB.inv, lastSeen: Date.now() },
+        { inv: DB.inv, balance: DB.balance, lastSeen: Date.now() },
         { merge: true });
       await batch.commit();
     }catch(e){

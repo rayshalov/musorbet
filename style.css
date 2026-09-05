@@ -259,6 +259,33 @@ h2{font-size:20px}
 .inv-total b{color:var(--txt)}
 .pool-section .card{width:auto}
 
+/* продажа: чип "$" в углу карточки инвентаря */
+.sell-chip{
+  position:absolute;top:6px;left:6px;z-index:2;
+  width:22px;height:22px;border-radius:50%;
+  border:none;cursor:pointer;font-family:inherit;
+  background:rgba(229,72,77,.16);color:var(--red);
+  font-weight:900;font-size:12px;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  transition:.15s;padding:0;
+}
+.sell-chip:hover{background:rgba(229,72,77,.42);transform:scale(1.15)}
+
+/* магазин */
+.shop-section .card{width:auto;height:216px}
+.shop-card .skin-ico .skin-img{width:96px}
+.buy-chip{
+  margin-top:8px;padding:6px 16px;border-radius:9px;
+  background:linear-gradient(135deg,#d9b869,#a8823e);color:#171204;
+  font-size:12px;font-weight:800;letter-spacing:.3px;
+  transition:.15s;pointer-events:none;
+}
+.shop-card:hover{transform:translateY(-3px)}
+.shop-card:hover .buy-chip{box-shadow:0 4px 14px rgba(201,164,92,.35)}
+.bal-badge{color:var(--gold)}
+.shop-search{max-width:240px}
+.shop-more-wrap{text-align:center;margin-top:22px}
+
 /* ---- modals ---- */
 .modal-overlay{
   position:fixed;inset:0;background:rgba(4,6,10,.75);backdrop-filter:blur(6px);

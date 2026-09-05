@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext y='19' font-size='19'%3E🥔%3C/text%3E%3C/svg%3E">
 <title>Upgrader — drennydrop</title>
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body class="page-upgrader">
 
@@ -17,6 +17,7 @@
     <a href="#" class="nav-link disabled">Coinflip <small>soon</small></a>
   </nav>
   <div class="topbar-right">
+    <div class="inv-badge bal-badge" id="bal-badge">💰 $0.00</div>
     <div class="inv-badge" id="inv-badge">🎒 0 шт · $0.00</div>
     <button class="btn btn-admin" id="sound-toggle" onclick="toggleSound()" title="Звук вкл/выкл">🔊</button>
     <button class="btn btn-admin" onclick="cycleTickSound()" title="Сменить тембр трещотки колеса">🎚</button>
@@ -82,6 +83,9 @@
       <button class="preset auto-toggle active" id="auto-toggle" title="Автоматически подбирать цель под выбранный шанс">⚙ Авто-подбор</button>
     </div>
 
+    <!-- кнопка апгрейда — прямо под шансами -->
+    <button class="btn btn-primary btn-xl" id="spin-btn" disabled>Выбери оба скина</button>
+
     <!-- ставка → награда -->
     <div class="upgrade-line">
       <div class="up-item" id="stage-from">
@@ -95,7 +99,6 @@
       </div>
     </div>
 
-    <button class="btn btn-primary btn-xl" id="spin-btn" disabled>Выбери оба скина</button>
     <div class="up-history" id="up-history"></div>
   </div>
 
@@ -127,6 +130,20 @@
     <div class="inv-total">Всего: <b id="pool-total">0</b> шт</div>
   </div>
   <div class="inv-grid" id="pool-grid"></div>
+  <div class="inv-total" id="pool-note" style="margin-top:12px"></div>
+</section>
+
+<!-- Магазин: покупка за баланс -->
+<section class="inventory-section shop-section">
+  <div class="inv-head">
+    <h2>Магазин</h2>
+    <div class="inv-total">Цена = рынок +10% · найдено: <b id="shop-count">0</b></div>
+    <input type="text" id="shop-search" class="input shop-search" placeholder="Поиск скина…" autocomplete="off">
+  </div>
+  <div class="inv-grid" id="shop-grid"></div>
+  <div class="shop-more-wrap" id="shop-more-wrap">
+    <button class="btn" id="shop-more">Показать ещё</button>
+  </div>
 </section>
 
 <!-- Модалка выигрыша -->
@@ -157,10 +174,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
-<script src="firebase-config.js?v=9" defer></script>
-<script src="cloud.js?v=9" defer></script>
-<script src="data.js?v=9"></script>
-<script src="sound.js?v=9"></script>
-<script src="app.js?v=9"></script>
+<script src="firebase-config.js?v=12" defer></script>
+<script src="cloud.js?v=12" defer></script>
+<script src="data.js?v=12"></script>
+<script src="sound.js?v=12"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>

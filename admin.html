@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext y='19' font-size='19'%3E🥔%3C/text%3E%3C/svg%3E">
 <title>Admin — drennydrop</title>
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body class="page-admin">
 
@@ -45,6 +45,7 @@
       <div class="stat-row"><span>Поражений</span><b class="c-red" id="st-losses">0</b></div>
       <div class="stat-row"><span>Инвентарь (шт)</span><b id="st-inv">0</b></div>
       <div class="stat-row"><span>Объём инвентаря</span><b class="c-gold" id="st-invsum">$0</b></div>
+      <div class="stat-row"><span>Баланс (этот браузер)</span><b class="c-gold" id="st-balance">$0</b></div>
       <div class="stat-row"><span>Всего выиграно</span><b class="c-green" id="st-won">$0</b></div>
       <div class="stat-row"><span>Всего потеряно</span><b class="c-red" id="st-lost">$0</b></div>
       <div class="stat-row"><span>Игроков в базе</span><b id="st-players">—</b></div>
@@ -65,6 +66,11 @@
         </select>
         <input type="number" id="grant-q" class="input small-input" value="1" min="1" max="100">
         <button class="btn btn-primary" onclick="grantRandom()">Выдать</button>
+      </div>
+      <p class="muted small">Баланс игрока (можно отрицательный — списать):</p>
+      <div class="grant-controls">
+        <input type="number" id="grant-bal" class="input" placeholder="Например 100 или -50" step="0.01">
+        <button class="btn btn-gold" onclick="grantBalance()">Начислить</button>
       </div>
       <p class="muted small">…или вручную точечно:</p>
       <div class="grant-manual">
@@ -123,11 +129,11 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
-<script src="firebase-config.js?v=9" defer></script>
-<script src="cloud.js?v=9" defer></script>
-<script src="data.js?v=9"></script>
-<script src="sound.js?v=9"></script>
-<script src="app.js?v=9"></script>
-<script src="admin.js?v=9"></script>
+<script src="firebase-config.js?v=12" defer></script>
+<script src="cloud.js?v=12" defer></script>
+<script src="data.js?v=12"></script>
+<script src="sound.js?v=12"></script>
+<script src="app.js?v=12"></script>
+<script src="admin.js?v=12"></script>
 </body>
 </html>

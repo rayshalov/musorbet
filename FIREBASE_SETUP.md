@@ -75,16 +75,22 @@ service cloud.firestore {
     match /users/{uid} {
       allow get, list: if true;
       allow create: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['inv','lastSeen'])
+        && request.resource.data.keys().hasOnly(['inv','balance','lastSeen'])
         && request.resource.data.inv is list
         && request.resource.data.inv.size() <= 500
-        && request.resource.data.inv.all(it, validItem(it));
+        && request.resource.data.inv.all(it, validItem(it))
+        && request.resource.data.balance is number
+        && request.resource.data.balance >= 0
+        && request.resource.data.balance <= 1000000;
       allow update: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['inv','lastSeen'])
+        && request.resource.data.keys().hasOnly(['inv','balance','lastSeen'])
         && request.resource.data.inv is list
         && request.resource.data.inv.size() <= 500
         && request.resource.data.inv.size() >= resource.data.inv.size() - 10
-        && request.resource.data.inv.all(it, validItem(it));
+        && request.resource.data.inv.all(it, validItem(it))
+        && request.resource.data.balance is number
+        && request.resource.data.balance >= 0
+        && request.resource.data.balance <= 1000000;
       allow delete: if false;
     }
 

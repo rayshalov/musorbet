@@ -76,8 +76,18 @@ function renderAdminStats(){
   $("#st-losses").textContent = s.losses;
   $("#st-inv").textContent = DB.inv.length;
   $("#st-invsum").textContent = fmt(invSum());
+  $("#st-balance").textContent = fmt(DB.balance);
   $("#st-won").textContent = fmt(s.won);
   $("#st-lost").textContent = fmt(s.lost);
+}
+
+/* начислить/списать баланс (отрицательное число — списать) */
+function grantBalance(){
+  const v = Math.max(-1000000, Math.min(1000000, +$("#grant-bal").value || 0));
+  if(!v){ toast("Введи сумму (можно отрицательную)","err"); return; }
+  DB.balance = Math.max(0, Math.round((DB.balance + v)*100)/100);
+  saveDB(); renderAdminStats();
+  toast(`Баланс изменён: ${fmt(DB.balance)}`,"ok");
 }
 
 /* ---------- инвентарь (клик по карточке = удалить) ---------- */

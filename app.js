@@ -15,10 +15,11 @@ function loadDB(){
           if(def){ x.img = def.img; x.rar = def.rar; }
         }
       });
+      if(typeof db.balance !== "number" || !isFinite(db.balance)) db.balance = 0;
       return db;
     }
   }catch(e){}
-  return { inv:[], stats:{ total:0, wins:0, losses:0, won:0, lost:0 }, uid:1 };
+  return { inv:[], balance:0, stats:{ total:0, wins:0, losses:0, won:0, lost:0 }, uid:1 };
 }
 function saveDB(){
   try{ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }catch(e){}
@@ -58,11 +59,98 @@ function skinMedia(item){
     : (item.ico||"🔫");
 }
 
+/* ---------- баланс / продажа / покупка ---------- */
+function sellPrice(item){ return Math.max(0.01, Math.round(item.price*0.85*100)/100); }
+function buyPrice(s){ return Math.max(0.01, Math.round(s.price*1.10*100)/100); }
+
+function renderBalance(){
+  const b = $("#bal-badge");
+  if(b) b.textContent = "💰 " + fmt(DB.balance);
+}
+
+function sellItem(id){
+  if(spinning) return;                     // во время прокрута инвентарь трогать нельзя
+  const item = DB.inv.find(x=>x.id===id);
+  if(!item) return;
+  const price = sellPrice(item);
+  if(selFrom && selFrom.id === id){ selFrom = null; selTo = null; }
+  removeItem(id);
+  DB.balance = Math.round((DB.balance + price)*100)/100;
+  Sound.click();
+  toast(`Продано: ${item.name} — +${fmt(price)}`,"ok");
+  renderFrom(); renderTo(); renderPool(); renderInv(); renderBalance();
+}
+
+function buySkin(idx){
+  if(spinning) return;
+  const def = SKINS[idx];
+  if(!def) return;
+  const price = buyPrice(def);
+  if(DB.balance < price){
+    toast(`Не хватает ${fmt(price - DB.balance)} на ${def.name}`,"err");
+    return;
+  }
+  DB.balance = Math.round((DB.balance - price)*100)/100;
+  addItem(def);
+  Sound.select();
+  toast(`Куплено: ${def.name} за ${fmt(price)}`,"ok");
+  renderInv(); renderBalance();
+}
+
+function renderShop(){
+  const grid = $("#shop-grid");
+  if(!grid) return;
+  const q = shopQuery.trim().toLowerCase();
+  const list = SKINS.map((s,i)=>({...s, idx:i}))
+    .filter(s => !q || s.name.toLowerCase().includes(q))
+    .sort((a,b)=>a.price-b.price);
+  const visible = list.slice(0, shopShown);
+  grid.innerHTML = visible.map(s=>`
+    <div class="card rar-${s.rar} shop-card" data-idx="${s.idx}" title="Купить за ${fmt(buyPrice(s))}">
+      <div class="rarity-dot"></div>
+      <div class="skin-ico">${skinMedia(s)}</div>
+      <div class="skin-name">${esc(s.name)}</div>
+      <div class="skin-price">${fmt(buyPrice(s))}</div>
+      <div class="buy-chip">Купить</div>
+    </div>`).join("");
+  $$("#shop-grid .card").forEach(c=>{
+    c.addEventListener("click", ()=> buySkin(+c.dataset.idx));
+  });
+  const count = $("#shop-count");
+  if(count) count.textContent = list.length;
+  const more = $("#shop-more-wrap");
+  if(more) more.hidden = visible.length >= list.length;
+}
+
+let shopShown = 60, shopQuery = "";
+const SHOP_PAGE = 120;
+
+function shopSearchDebounced(v){
+  clearTimeout(shopSearchDebounced.t);
+  shopSearchDebounced.t = setTimeout(()=>{
+    shopQuery = v;
+    shopShown = 60;
+    renderShop();
+  }, 250);
+}
+
+function initShopControls(){
+  const inp = $("#shop-search");
+  if(inp) inp.addEventListener("input", ()=> shopSearchDebounced(inp.value));
+  const more = $("#shop-more");
+  if(more) more.addEventListener("click", ()=>{ shopShown += SHOP_PAGE; renderShop(); });
+}
+
 function skinCard(item, opts={}){
   const cls = ["card","rar-"+item.rar];
   if(opts.selected) cls.push("selected");
+  /* чип продажи — только в инвентаре */
+  const sell = opts.sellable
+    ? `<button class="sell-chip" data-id="${item.id}" title="Продать за ${fmt(sellPrice(item))}">$</button>`
+    : "";
   return `<div class="${cls.join(" ")}" data-id="${item.id}">
     <div class="rarity-dot"></div>
+    ${sell}
     <div class="skin-ico">${skinMedia(item)}</div>
     <div class="skin-name">${esc(item.name)}</div>
     <div class="skin-price">${fmt(item.price)}</div>
@@ -319,30 +407,31 @@ function renderTo(){
 }
 
 /* ---------- пул целей ---------- */
+const POOL_LIMIT = 60;   // сколько ближайших целей показываем (в каталоге теперь тысячи скинов)
+
 function renderPool(){
   const grid = $("#pool-grid");
   if(!grid) return;
 
-  let list;
+  let list, note = "";
   if(selFrom){
     const w = targetWindow();
     const T = selFrom.price * (100/chance);
     list = SKINS.map((s,i)=>({...s, idx:i}))
       .filter(s => s.price >= w.lo && s.price <= w.hi)
       .sort((a,b)=> Math.abs(a.price-T) - Math.abs(b.price-T));
-    if(!list.length){
-      if(grid.dataset.lsig !== "empty"){
-        grid.dataset.lsig = "empty";
-        grid.innerHTML = `<div class="card locked rar-blue"><div class="card-empty">Нет подходящих целей.<br>Измени шанс или скин.</div></div>`;
-      }
-      return;
-    }
+    const total = list.length;
+    list = list.slice(0, POOL_LIMIT);
+    if(total > POOL_LIMIT) note = `ближайшие ${POOL_LIMIT} из ${total} подходящих`;
   } else {
     list = SKINS.map((s,i)=>({...s, idx:i})).sort((a,b)=>a.price-b.price);
+    const total = list.length;
+    list = list.slice(0, POOL_LIMIT);
+    if(total > POOL_LIMIT) note = `${POOL_LIMIT} самых дешёвых из ${total} — выбери ставку, чтобы сузить`;
   }
 
   /* не пересобираем DOM без необходимости — перетаскивание колеса на каждый кадр
-     перестраивало 48 карточек (с перезагрузкой картинок) и лагало */
+     перестраивало карточки (с перезагрузкой картинок) и лагало */
   const listSig = list.map(s=>s.idx).join(",");
   const selName = selTo ? selTo.name : "";
   if(grid.dataset.lsig === listSig){
@@ -353,10 +442,20 @@ function renderPool(){
         c.classList.toggle("selected", !!(selTo && s && selTo.name === s.name));
       });
     }
+    const noteEl = $("#pool-note");
+    if(noteEl && noteEl.textContent !== note) noteEl.textContent = note;
     return;
   }
   grid.dataset.lsig = listSig;
   grid.dataset.ssig = selName;
+
+  const noteEl = $("#pool-note");
+  if(noteEl) noteEl.textContent = note;
+
+  if(!list.length){
+    grid.innerHTML = `<div class="card locked rar-blue"><div class="card-empty">Нет подходящих целей.<br>Измени шанс или скин.</div></div>`;
+    return;
+  }
 
   grid.innerHTML = list.map(s=>`
     <div class="card rar-${s.rar}${selTo && selTo.name===s.name ? " selected":""}" data-idx="${s.idx}">
@@ -378,9 +477,15 @@ function renderInv(){
   const grid = $("#inv-grid");
   if(!grid) return;
   const list = DB.inv.filter(x => invFilter==="all" || x.rar===invFilter).slice().reverse();
-  grid.innerHTML = list.map(x=>skinCard(x,{selected: selFrom && selFrom.id===x.id})).join("");
+  grid.innerHTML = list.map(x=>skinCard(x,{selected: selFrom && selFrom.id===x.id, sellable:true})).join("");
   $$("#inv-grid .card").forEach(c=>{
     c.addEventListener("click", ()=> selectFrom(+c.dataset.id));
+  });
+  $$("#inv-grid .sell-chip").forEach(ch=>{
+    ch.addEventListener("click", e=>{
+      e.stopPropagation();
+      sellItem(+ch.dataset.id);
+    });
   });
   $("#inv-empty").hidden = DB.inv.length > 0;
   const badge = $("#inv-badge");
@@ -585,13 +690,14 @@ function initFilters(){
 
 /* ---------- boot ---------- */
 function renderAll(){
-  renderFrom(); renderTo(); renderPool(); renderInv(); updateSpinBtn();
+  renderFrom(); renderTo(); renderPool(); renderInv(); renderShop(); renderBalance(); updateSpinBtn();
 }
 
 function boot(){
   chanceUIInit();
   drawWheelZone();   // без этого при загрузке колесо показывает 100% зону до первого клика по шансу
   initFilters();
+  initShopControls();
   const st = $("#sound-toggle");
   if(st) st.textContent = Sound.enabled ? "🔊" : "🔇";
   renderAll();
