@@ -175,6 +175,13 @@ h2{font-size:20px}
 }
 .slot-title{color:var(--mut);font-size:12px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase}
 .slot-note{color:var(--mut);font-size:11px}
+/* стек нескольких выбранных скинов в слоте ставки */
+.skin-ico.stack{position:relative;width:118px;height:74px;margin:0 auto 8px}
+.skin-ico.stack .skin-img{position:absolute;width:80px;left:50%;top:0;margin-left:-40px}
+.skin-ico.stack .skin-img:nth-child(1){transform:translateX(-20px) rotate(-9deg);opacity:.85}
+.skin-ico.stack .skin-img:nth-child(2){transform:translateX(20px) rotate(9deg);opacity:.85;z-index:1}
+.skin-ico.stack .skin-img:nth-child(3){z-index:2}
+.skin-ico.stack .skin-img[src=""],.skin-ico.stack .skin-img[src$='null']{display:none}
 .up-history{margin:14px auto 0;justify-content:center}
 
 /* нижние панели с внутренним скроллом */
