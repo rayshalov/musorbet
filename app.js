@@ -136,9 +136,60 @@ function shopSearchDebounced(v){
 
 function initShopControls(){
   const inp = $("#shop-search");
-  if(inp) inp.addEventListener("input", ()=> shopSearchDebounced(inp.value));
+  if(inp) inp.addEventListener("input", ()=>{
+    shopSearchDebounced(inp.value);
+    /* поиск имеет смысл только в магазине — переключаем вкладку сама */
+    if(rightTab !== "shop" || mobileTab === "pool"){
+      rightTab = "shop";
+      if(mobileTab === "pool") mobileTab = "shop";
+      syncPanels();
+    }
+  });
   const more = $("#shop-more");
   if(more) more.addEventListener("click", ()=>{ shopShown += SHOP_PAGE; renderShop(); });
+}
+
+/* ---------- вкладки панелей (инвентарь / цели / магазин) ---------- */
+let mobileTab = "inv", rightTab = "pool";
+
+function syncPanels(){
+  const phone = matchMedia("(max-width:900px)").matches;
+  const tabs = $("#panel-tabs-phone");
+  if(tabs) tabs.hidden = !phone;
+  if(phone){
+    $("#panel-inv").classList.toggle("active", mobileTab === "inv");
+    $("#panel-right").classList.toggle("active", mobileTab !== "inv");
+    $("#pool-wrap").hidden = mobileTab !== "pool";
+    $("#shop-wrap").hidden = mobileTab !== "shop";
+    $$("#panel-tabs-phone .ptab").forEach(b=>b.classList.toggle("active", b.dataset.t === mobileTab));
+  } else {
+    $("#panel-inv").classList.add("active");
+    $("#panel-right").classList.add("active");
+    $("#pool-wrap").hidden = rightTab !== "pool";
+    $("#shop-wrap").hidden = rightTab !== "shop";
+    $$(".rt-btn").forEach(b=>b.classList.toggle("active", b.dataset.rt === rightTab));
+  }
+  /* вкладка стала видимой — перерисовать (ленивые картинки) */
+  if(!$("#shop-wrap").hidden) renderShop();
+}
+
+function initPanels(){
+  $$("#panel-tabs-phone .ptab").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      mobileTab = b.dataset.t;
+      Sound.click();
+      syncPanels();
+    });
+  });
+  $$(".rt-btn").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      rightTab = b.dataset.rt;
+      Sound.click();
+      syncPanels();
+    });
+  });
+  matchMedia("(max-width:900px)").addEventListener("change", syncPanels);
+  syncPanels();
 }
 
 function skinCard(item, opts={}){
@@ -364,7 +415,7 @@ function renderFrom(){
     box.innerHTML = `<div class="rarity-dot"></div><div class="skin-ico">${skinMedia(selFrom)}</div><div class="skin-name">${esc(selFrom.name)}</div><div class="skin-price">${fmt(selFrom.price)}</div>`;
   } else {
     box.className = "card locked";
-    box.innerHTML = `<div class="card-empty">Выбери скин<br>из инвентаря ↓</div>`;
+    box.innerHTML = `Выбери скин<br>в «Моих скинах»`;
   }
 }
 
@@ -399,10 +450,10 @@ function renderTo(){
   } else if(selFrom){
     const T = selFrom.price * (100/chance);
     box.className = "card locked";
-    box.innerHTML = `<div class="card-empty">Награда ≈ <b>${fmt(T)}</b><br>выбери скин в пуле ↓</div>`;
+    box.innerHTML = `Награда ≈ <b>${fmt(T)}</b><br>выбери во «Целях»`;
   } else {
     box.className = "card locked";
-    box.innerHTML = `<div class="card-empty">Выбери скин<br>целью ↓</div>`;
+    box.innerHTML = `Выбери цель<br>во «Целях»`;
   }
 }
 
@@ -715,6 +766,7 @@ function boot(){
   drawWheelZone();   // без этого при загрузке колесо показывает 100% зону до первого клика по шансу
   initFilters();
   initShopControls();
+  initPanels();
   const st = $("#sound-toggle");
   if(st) st.textContent = Sound.enabled ? "🔊" : "🔇";
   renderAll();

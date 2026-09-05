@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext y='19' font-size='19'%3E🥔%3C/text%3E%3C/svg%3E">
 <title>Upgrader — drennydrop</title>
-<link rel="stylesheet" href="style.css?v=16">
+<link rel="stylesheet" href="style.css?v=19">
 </head>
 <body class="page-upgrader">
 
@@ -25,54 +25,57 @@
   </div>
 </header>
 
-<main class="upgrade-wrap">
+<main class="up-main">
 
-  <div class="upgrade-stage">
+  <div class="up-stage-row">
 
-    <!-- ===== КОЛЕСО ===== -->
-    <div class="wheel-wrap">
-      <div class="wheel" id="wheel">
-        <svg viewBox="0 0 300 300" class="wheel-svg">
-          <defs>
-            <linearGradient id="wg" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#e6c987"/>
-              <stop offset="1" stop-color="#b98f47"/>
-            </linearGradient>
-          </defs>
+    <!-- левый слот: ставка -->
+    <div class="slot-panel">
+      <div class="slot-title">Твоя ставка</div>
+      <div class="card locked" id="card-from"><div class="card-empty">Выбери скин<br>в «Моих скинах»</div></div>
+      <div class="slot-note">чип $ в углу — продать скин</div>
+    </div>
 
-          <!-- деления по кругу -->
-          <circle class="ticks" cx="150" cy="150" r="141"/>
-
-          <!-- серое кольцо (зона проигрыша) -->
-          <circle class="ring-track" cx="150" cy="150" r="120"/>
-
-          <!-- мягкое свечение зоны: широкий полупрозрачный ход вместо SVG-фильтра
-               (фильтр пересчитывался каждый кадр и вызывал лаги) -->
-          <circle class="ring-win-glow" id="win-arc-glow" cx="150" cy="150" r="120"
-                  transform="rotate(-90 150 150)"/>
-
-          <!-- зона игрока (старт с 12 часов, по часовой) -->
-          <circle class="ring-win" id="win-arc" cx="150" cy="150" r="120"
-                  transform="rotate(-90 150 150)"/>
-
-          <!-- метки на границах зоны -->
-          <g id="zone-marks"></g>
-        </svg>
-
-        <!-- стрелка: отдельный HTML-слой поверх SVG.
-             Safari не выносит SVG-элементы на GPU-слой, а HTML-элементы
-             с transform — выносит, поэтому стрелка больше не часть SVG -->
-        <div class="needle" id="needle"></div>
-
-        <div class="wheel-center">
-          <div class="wc-mult" id="up-mult">2.00×</div>
-          <div class="wc-chance">шанс <b id="chance-val">50%</b></div>
+    <!-- центр: колесо -->
+    <div class="wheel-panel">
+      <div class="wheel-wrap">
+        <div class="wheel" id="wheel">
+          <svg viewBox="0 0 300 300" class="wheel-svg">
+            <defs>
+              <linearGradient id="wg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#e6c987"/>
+                <stop offset="1" stop-color="#b98f47"/>
+              </linearGradient>
+            </defs>
+            <circle class="ticks" cx="150" cy="150" r="141"/>
+            <circle class="ring-track" cx="150" cy="150" r="120"/>
+            <circle class="ring-win-glow" id="win-arc-glow" cx="150" cy="150" r="120"
+                    transform="rotate(-90 150 150)"/>
+            <circle class="ring-win" id="win-arc" cx="150" cy="150" r="120"
+                    transform="rotate(-90 150 150)"/>
+            <g id="zone-marks"></g>
+          </svg>
+          <div class="needle" id="needle"></div>
+          <div class="wheel-center">
+            <div class="wc-mult" id="up-mult">2.00×</div>
+            <div class="wc-chance">шанс <b id="chance-val">50%</b></div>
+          </div>
         </div>
       </div>
       <div class="wheel-hint">↺ тяни по кольцу — настрой шанс</div>
     </div>
 
-    <!-- пресеты шанса -->
+    <!-- правый слот: цель -->
+    <div class="slot-panel">
+      <div class="slot-title">Получишь</div>
+      <div class="card locked" id="card-to"><div class="card-empty">Выбери цель<br>во «Целях»</div></div>
+      <div class="slot-note">шанс подстроится сам</div>
+    </div>
+  </div>
+
+  <!-- кнопка апгрейда + пресеты: отдельный ряд, чтобы не расширять колонку колеса -->
+  <div class="spin-row">
+    <button class="btn btn-primary btn-xl" id="spin-btn" disabled>Выбери оба скина</button>
     <div class="chance-presets">
       <span>Шанс:</span>
       <button class="preset" data-c="5">5%</button>
@@ -80,71 +83,70 @@
       <button class="preset" data-c="50">50%</button>
       <button class="preset" data-c="75">75%</button>
       <button class="preset" data-c="95">95%</button>
-      <button class="preset auto-toggle active" id="auto-toggle" title="Автоматически подбирать цель под выбранный шанс">⚙ Авто-подбор</button>
+      <button class="preset auto-toggle active" id="auto-toggle" title="Автоматически подбирать цель под выбранный шанс">⚙ Авто</button>
     </div>
+  </div>
 
-    <!-- кнопка апгрейда — прямо под шансами -->
-    <button class="btn btn-primary btn-xl" id="spin-btn" disabled>Выбери оба скина</button>
+  <div class="up-history" id="up-history"></div>
 
-    <!-- ставка → награда -->
-    <div class="upgrade-line">
-      <div class="up-item" id="stage-from">
-        <div class="up-label">Твой скин</div>
-        <div class="card locked" id="card-from"><div class="card-empty">Выбери скин<br>из инвентаря ↓</div></div>
+  <!-- вкладки панелей (телефон) -->
+  <div class="panel-tabs" id="panel-tabs-phone">
+    <button class="ptab active" data-t="inv">🎒 Мои скины</button>
+    <button class="ptab" data-t="pool">🎯 Цели</button>
+    <button class="ptab" data-t="shop">🛒 Магазин</button>
+  </div>
+
+  <!-- нижние панели -->
+  <div class="panels">
+
+    <section class="panel" id="panel-inv">
+      <div class="panel-head">
+        <h3>Мои скины</h3>
+        <div class="inv-filter">
+          <button class="btn btn-sm active" data-rar="all">Все</button>
+          <button class="btn btn-sm" data-rar="blue">Consumer</button>
+          <button class="btn btn-sm" data-rar="purple">Restricted</button>
+          <button class="btn btn-sm" data-rar="pink">Classified</button>
+          <button class="btn btn-sm" data-rar="red">Covert</button>
+          <button class="btn btn-sm" data-rar="gold">★ Ножи</button>
+        </div>
       </div>
-      <div class="to-arrow">⟶</div>
-      <div class="up-item" id="stage-to">
-        <div class="up-label">Получишь</div>
-        <div class="card locked" id="card-to"><div class="card-empty">Выбери скин<br>целью ↓</div></div>
+      <div class="panel-scroll">
+        <div class="inv-grid" id="inv-grid"></div>
+        <div class="inv-empty" id="inv-empty" hidden>
+          <div class="inv-empty-ico">📭</div>
+          <p>Инвентарь пуст. Загляни в <a href="admin.html">админку</a> и выдай себе скины.</p>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <div class="up-history" id="up-history"></div>
+    <section class="panel" id="panel-right">
+      <div class="panel-head">
+        <div class="right-tabs">
+          <button class="rt-btn active" data-rt="pool">🎯 Цели апгрейда</button>
+          <button class="rt-btn" data-rt="shop">🛒 Магазин</button>
+        </div>
+        <input type="text" id="shop-search" class="input shop-search" placeholder="Поиск скина…" autocomplete="off">
+      </div>
+      <div class="panel-scroll">
+        <div id="pool-wrap">
+          <div class="inv-total" style="margin-bottom:10px">Всего: <b id="pool-total">0</b> шт</div>
+          <div class="inv-grid" id="pool-grid"></div>
+          <div class="inv-total" id="pool-note" style="margin-top:12px"></div>
+        </div>
+        <div id="shop-wrap" hidden>
+          <div class="inv-total" style="margin-bottom:10px">Цена = рынок +10% · найдено: <b id="shop-count">0</b></div>
+          <div class="inv-grid" id="shop-grid"></div>
+          <div class="shop-more-wrap" id="shop-more-wrap">
+            <button class="btn" id="shop-more">Показать ещё</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </div>
 
 </main>
-
-<section class="inventory-section">
-  <div class="inv-head">
-    <h2>Твой инвентарь</h2>
-    <div class="inv-filter">
-      <button class="btn btn-sm active" data-rar="all">Все</button>
-      <button class="btn btn-sm" data-rar="blue">Consumer</button>
-      <button class="btn btn-sm" data-rar="purple">Restricted</button>
-      <button class="btn btn-sm" data-rar="pink">Classified</button>
-      <button class="btn btn-sm" data-rar="red">Covert</button>
-      <button class="btn btn-sm" data-rar="gold">★ Ножи</button>
-    </div>
-  </div>
-  <div class="inv-grid" id="inv-grid"></div>
-  <div class="inv-empty" id="inv-empty" hidden>
-    <div class="inv-empty-ico">📭</div>
-    <p>Инвентарь пуст. Загляни в <a href="admin.html">админку</a> и выдай себе скины.</p>
-  </div>
-</section>
-
-<!-- Пул целевых скинов -->
-<section class="inventory-section pool-section">
-  <div class="inv-head">
-    <h2>Скины для апгрейда</h2>
-    <div class="inv-total">Всего: <b id="pool-total">0</b> шт</div>
-  </div>
-  <div class="inv-grid" id="pool-grid"></div>
-  <div class="inv-total" id="pool-note" style="margin-top:12px"></div>
-</section>
-
-<!-- Магазин: покупка за баланс -->
-<section class="inventory-section shop-section">
-  <div class="inv-head">
-    <h2>Магазин</h2>
-    <div class="inv-total">Цена = рынок +10% · найдено: <b id="shop-count">0</b></div>
-    <input type="text" id="shop-search" class="input shop-search" placeholder="Поиск скина…" autocomplete="off">
-  </div>
-  <div class="inv-grid" id="shop-grid"></div>
-  <div class="shop-more-wrap" id="shop-more-wrap">
-    <button class="btn" id="shop-more">Показать ещё</button>
-  </div>
-</section>
 
 <!-- Модалка выигрыша -->
 <div class="modal-overlay" id="win-modal" hidden>
@@ -174,10 +176,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
-<script src="firebase-config.js?v=16" defer></script>
-<script src="cloud.js?v=16" defer></script>
-<script src="data.js?v=16"></script>
-<script src="sound.js?v=16"></script>
-<script src="app.js?v=16"></script>
+<script src="firebase-config.js?v=19" defer></script>
+<script src="cloud.js?v=19" defer></script>
+<script src="data.js?v=19"></script>
+<script src="sound.js?v=19"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>

@@ -157,9 +157,62 @@ h2{font-size:20px}
 /* история: отступ снизу */
 .up-history{margin-top:24px !important}
 
-/* ---- upgrade page (wheel) ---- */
-.page-upgrader main{max-width:1050px;margin:0 auto;padding:34px 20px 20px}
-.upgrade-stage{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:34px;box-shadow:var(--shadow);text-align:center}
+/* ---- upgrade page (новая компоновка: слоты + колесо + панели) ---- */
+.page-upgrader main.up-main{max-width:1280px;margin:0 auto;padding:16px 16px 40px}
+.up-stage-row{
+  display:grid;
+  grid-template-columns:minmax(180px,240px) auto minmax(180px,240px);
+  gap:26px;justify-content:center;align-items:start;
+}
+.wheel-panel{display:flex;flex-direction:column;align-items:center}
+.spin-row{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:12px}
+.spin-row .chance-presets{margin-bottom:0}
+.slot-panel{
+  background:var(--card);border:1px solid var(--line);border-radius:20px;
+  padding:18px 14px;min-height:360px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  text-align:center;
+}
+.slot-title{color:var(--mut);font-size:12px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase}
+.slot-note{color:var(--mut);font-size:11px}
+.up-history{margin:14px auto 0;justify-content:center}
+
+/* нижние панели с внутренним скроллом */
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+.panel{
+  background:var(--card);border:1px solid var(--line);border-radius:20px;
+  display:none;flex-direction:column;overflow:hidden;
+  height:clamp(340px,46vh,470px);
+}
+.panel.active{display:flex}
+.panel-head{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;
+  border-bottom:1px solid var(--line);flex-wrap:wrap;
+}
+.panel-head h3{font-size:15px}
+.panel-scroll{flex:1;overflow-y:auto;padding:14px;-webkit-overflow-scrolling:touch}
+.panel-scroll .inv-grid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px}
+.panel-scroll .card{width:100%;height:185px}
+.right-tabs{display:flex;gap:6px}
+.rt-btn{
+  padding:7px 14px;border-radius:9px;border:1px solid var(--line);
+  background:var(--bg2);color:var(--mut);font-weight:800;font-size:12px;
+  cursor:pointer;font-family:inherit;transition:.15s;
+}
+.rt-btn:hover{color:var(--txt)}
+.rt-btn.active{background:linear-gradient(135deg,#d9b869,#a8823e);color:#171204;border-color:transparent}
+#shop-search{max-width:220px;padding:8px 12px}
+/* вкладки панелей на телефоне */
+.panel-tabs{display:none;gap:6px;margin-top:14px}
+.ptab{
+  padding:11px 6px;border-radius:12px;border:1px solid var(--line);
+  background:var(--card);color:var(--mut);font-weight:800;font-size:12px;
+  cursor:pointer;font-family:inherit;transition:.15s;
+}
+.ptab.active{background:linear-gradient(135deg,#d9b869,#a8823e);color:#171204;border-color:transparent}
+.ptab:not(.active){opacity:.75}
+
+/* колесо/пресеты — прежние правила */
 
 /* колесо */
 .wheel-wrap{position:relative;width:340px;height:340px;margin:0 auto 8px;user-select:none;contain:layout style}
@@ -219,7 +272,6 @@ h2{font-size:20px}
 .wheel-hint{text-align:center;color:var(--mut);font-size:12px;margin-bottom:22px}
 
 /* пресеты шанса */
-.chance-presets{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:30px;color:var(--mut);font-size:13px;font-weight:700}
 .preset{
   padding:7px 16px;border-radius:10px;border:1px solid var(--line);
   background:var(--bg2);color:var(--txt);font-weight:800;font-size:13px;cursor:pointer;transition:.15s;
@@ -231,7 +283,6 @@ h2{font-size:20px}
 .auto-toggle.active{background:linear-gradient(135deg,#3dbd8f,#2b8a68);border-style:solid;border-color:transparent;color:#04241a;box-shadow:0 4px 16px rgba(61,189,143,.25)}
 
 /* ставка → награда */
-.upgrade-line{display:flex;align-items:center;justify-content:center;gap:30px;flex-wrap:wrap;margin-bottom:28px}
 .up-label{color:var(--mut);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:10px}
 .to-arrow{font-size:34px;color:var(--purple);text-shadow:0 0 14px rgba(201,164,92,.4);padding-bottom:44px}
 
@@ -354,25 +405,34 @@ h2{font-size:20px}
 }
 .topbar-right{margin-left:auto;display:flex;gap:10px;align-items:center}
 
+/* ---- телефон/узкий экран: колесо сверху, слоты рядом, одна панель ---- */
+@media (max-width:900px){
+  .up-stage-row{grid-template-columns:1fr 1fr;gap:12px}
+  .wheel-panel{grid-column:1/-1;order:-1}
+  .slot-panel{min-height:0;padding:12px 8px;gap:8px}
+  .panel-tabs{display:grid;grid-template-columns:repeat(3,1fr);margin-top:14px}
+  .right-tabs{display:none}
+  .panels{grid-template-columns:1fr}
+  .panel{display:none;height:auto;max-height:56vh}
+  .panel.active{display:flex}
+  .panel-scroll{max-height:calc(56vh - 58px)}
+  .spin-row{flex-direction:column;gap:10px}
+  .chance-presets{flex-wrap:wrap;row-gap:8px}
+}
+
 @media (max-width:700px){
   .topbar{flex-wrap:wrap;gap:10px;padding:10px 14px}
   .nav{order:3;width:100%;justify-content:center}
   .topbar-right{flex-wrap:wrap;justify-content:center;margin-left:auto}
   .inv-badge{padding:7px 10px;font-size:12px}
-  .upgrade-stage{padding:22px 12px}
-  .page-upgrader main{padding:22px 10px 12px}
+  .page-upgrader main.up-main{padding:12px 10px 32px}
   /* колесо сжимается под ширину экрана (высота отдельной формулой — для старых iOS без aspect-ratio) */
   .wheel-wrap{width:min(340px,calc(100vw - 48px));height:min(340px,calc(100vw - 48px))}
   .wheel-center{width:150px;height:150px}
   .wc-mult{font-size:30px}
-  /* пресеты шанса переносятся на вторую строку */
-  .chance-presets{flex-wrap:wrap;row-gap:8px}
   .preset{padding:6px 12px;font-size:12px}
   .auto-toggle{margin-left:0}
-  .upgrade-line{gap:14px}
-  .up-item{width:100%;max-width:280px}
-  .to-arrow{padding-bottom:0;transform:rotate(90deg)}
-  .upgrade-line{flex-direction:column;align-items:center}
+  .slot-panel .card{transform:scale(.92)}
   .hist-chip{max-width:100%;font-size:11px}
   .inventory-section{padding:26px 12px 60px}
   .inv-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
