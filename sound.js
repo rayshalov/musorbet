@@ -145,6 +145,13 @@ const Sound = (() => {
     /* заранее спланировать весь ряд щелчков спина на аудио-часах */
     scheduleTicks,
     cancelTicks,
+    /* явно закрыть аудиоконтекст (при уходе со страницы) */
+    close(){
+      if(ctx){
+        try{ ctx.close(); }catch(e){}
+        ctx = null;
+      }
+    },
     get tickStyle(){ return tickStyle; },
     tickStyleName(){
       const s = TICK_STYLES.find(x=>x.id===tickStyle);
@@ -190,3 +197,12 @@ function cycleTickSound(){
   const name = Sound.cycleTickStyle();
   if(window.toast) toast("Трещотка: " + name, "ok");
 }
+
+/* при перезагрузке/уходе со страницы явно закрываем аудиоконтекст.
+   Иначе Safari macOS прикрепляет новую страницу к старому аудио-маршруту
+   с огромной задержкой — помогало только полное закрытие вкладки */
+function closeAudioContext(){
+  if(typeof Sound !== "undefined") Sound.close();
+}
+window.addEventListener("pagehide", closeAudioContext);
+window.addEventListener("beforeunload", closeAudioContext);
