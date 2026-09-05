@@ -550,23 +550,33 @@ async function spin(){
 
   const DURATION = 4200;
   const t0 = performance.now();
-  let lastTickAngle = startAngle;              // для звука трещотки
-  let lastTickTime = 0;
 
   function easeOutQuint(t){ return 1 - Math.pow(1-t, 5); }
+
+  /* --- трещотка: весь ряд щелчков считается заранее и планируется на аудио-часах.
+     Звук идёт по своим часам с точностью до сэмпла и не отстаёт от анимации,
+     даже если Safari притормаживает основной поток --- */
+  {
+    let lastTickAngle = startAngle, lastTickTime = -Infinity;
+    const times = [];
+    const STEP = 20;   // шаг симуляции траектории, мс
+    for(let ms = 0; ms <= DURATION; ms += STEP){
+      const t = ms/DURATION;
+      const cur = normalizedStart + delta * easeOutQuint(t);
+      const minGap = 60 + 260 * Math.pow(t, 1.5);
+      if(Math.abs(cur - lastTickAngle) >= 18 && ms - lastTickTime >= minGap){
+        lastTickAngle = cur;
+        lastTickTime = ms;
+        times.push({ at: ms/1000, speed: 1 - t });
+      }
+    }
+    Sound.scheduleTicks(times);
+  }
 
   await new Promise(resolve=>{
     function frame(now){
       const t = Math.min(1, (now - t0)/DURATION);
       const cur = normalizedStart + delta * easeOutQuint(t);
-      /* трещотка: ритм зависит от фазы вращения —
-         в первую секунду щедро (~60мс), к остановке лениво (~300мс) */
-      const minGap = 60 + 260 * Math.pow(t, 1.5);
-      if(Math.abs(cur - lastTickAngle) >= 18 && now - lastTickTime >= minGap){
-        lastTickAngle = cur;
-        lastTickTime = now;
-        Sound.tick(1 - t);
-      }
       setNeedle(cur);
       if(t < 1) requestAnimationFrame(frame);
       else { setNeedle(finalAngle); resolve(); }
@@ -703,6 +713,11 @@ function boot(){
   renderAll();
   const sb = $("#spin-btn");
   if(sb) sb.addEventListener("click", spin);
+
+  /* спрятал вкладку — запланированные щелчки глушим (анимация-то остановилась) */
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.hidden) Sound.cancelTicks();
+  });
 
   /* облачная синхронизация: когда подтянется инвентарь из Firebase — перерисовать */
   Cloud.init();

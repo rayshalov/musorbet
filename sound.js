@@ -82,6 +82,33 @@ const Sound = (() => {
     return tickBuf;
   }
 
+  /* весь ряд щелчков планируем на аудио-часах заранее: звук идёт по своим часам
+     и не отстаёт от анимации, даже если основной поток занят (болезнь macOS Safari) */
+  let scheduledTicks = [];
+  function scheduleTicks(times){
+    const c = ac(); if(!c) return 0;
+    cancelTicks();
+    const t0 = c.currentTime + 0.06;
+    for(const it of times){
+      const src = c.createBufferSource();
+      src.buffer = tickBuffer(c);
+      let base = 1750;                            // mech
+      if(tickStyle === "wood") base = 1150;
+      else if(tickStyle === "soft") base = 800;
+      src.playbackRate.value = (base/1750) * (0.88 + 0.24*it.speed);
+      const g = c.createGain();
+      g.gain.value = (tickStyle === "soft" ? 0.55 : 0.9) * (0.5 + 0.5*it.speed);
+      src.connect(g); g.connect(c.destination);
+      src.start(t0 + it.at);
+      scheduledTicks.push(src);
+    }
+    return scheduledTicks.length;
+  }
+  function cancelTicks(){
+    scheduledTicks.forEach(s=>{ try{ s.stop(); }catch(e){} });
+    scheduledTicks = [];
+  }
+
   return {
     get enabled(){ return enabled; },
     toggle(){
@@ -100,8 +127,7 @@ const Sound = (() => {
       tone({freq:440, type:"sine", dur:0.14, peak:0.06, lp:2400});
       tone({freq:587, type:"sine", dur:0.16, peak:0.05, delay:0.08, lp:2400});
     },
-    /* трещотка колеса; speed 0..1 — темп задаёт анимация.
-       Воспроизведение из прекэшированного буфера: один узел на щелчок */
+    /* разовый тик (превью тембра на кнопке 🎚) */
     tick(speed=1){
       const c = ac(); if(!c) return;
       const buf = tickBuffer(c);
@@ -116,6 +142,9 @@ const Sound = (() => {
       src.connect(g); g.connect(c.destination);
       src.start();
     },
+    /* заранее спланировать весь ряд щелчков спина на аудио-часах */
+    scheduleTicks,
+    cancelTicks,
     get tickStyle(){ return tickStyle; },
     tickStyleName(){
       const s = TICK_STYLES.find(x=>x.id===tickStyle);
@@ -151,6 +180,7 @@ const Sound = (() => {
 /* переключатель в шапке (иконка обновляется в boot) */
 function toggleSound(){
   const on = Sound.toggle();
+  if(!on) Sound.cancelTicks();   // выключил звук посреди прокрута — щелчки глушим
   const b = document.querySelector("#sound-toggle");
   if(b) b.textContent = on ? "🔊" : "🔇";
 }
