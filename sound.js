@@ -82,29 +82,45 @@ const Sound = (() => {
     return tickBuf;
   }
 
-  /* весь ряд щелчков планируем на аудио-часах заранее: звук идёт по своим часам
-     и не отстаёт от анимации, даже если основной поток занят (болезнь macOS Safari) */
+  /* весь ряд щелчков планируем на аудио-часах заранее, но порциями (lookahead):
+     разовое создание ~50 узлов в кадре старта давало всплеск в WebKit */
   let scheduledTicks = [];
+  let tickQueue = [], tickPos = 0, tickBase = 0, tickTimer = null;
+
+  function makeTickSource(at, speed){
+    const src = ctx.createBufferSource();
+    src.buffer = tickBuffer(ctx);
+    let base = 1750;                            // mech
+    if(tickStyle === "wood") base = 1150;
+    else if(tickStyle === "soft") base = 800;
+    src.playbackRate.value = (base/1750) * (0.88 + 0.24*speed);
+    const g = ctx.createGain();
+    g.gain.value = (tickStyle === "soft" ? 0.55 : 0.9) * (0.5 + 0.5*speed);
+    src.connect(g); g.connect(ctx.destination);
+    src.start(at);
+    scheduledTicks.push(src);
+  }
+  function pumpTicks(){
+    if(!ctx || tickPos >= tickQueue.length) return;
+    const horizon = ctx.currentTime + 0.3;      // держим ~300мс запаса
+    while(tickPos < tickQueue.length && tickBase + tickQueue[tickPos].at <= horizon){
+      const it = tickQueue[tickPos++];
+      makeTickSource(tickBase + it.at, it.speed);
+    }
+    if(tickPos < tickQueue.length){
+      tickTimer = setTimeout(pumpTicks, 100);
+    }
+  }
   function scheduleTicks(times){
     const c = ac(); if(!c) return 0;
     cancelTicks();
-    const t0 = c.currentTime + 0.06;
-    for(const it of times){
-      const src = c.createBufferSource();
-      src.buffer = tickBuffer(c);
-      let base = 1750;                            // mech
-      if(tickStyle === "wood") base = 1150;
-      else if(tickStyle === "soft") base = 800;
-      src.playbackRate.value = (base/1750) * (0.88 + 0.24*it.speed);
-      const g = c.createGain();
-      g.gain.value = (tickStyle === "soft" ? 0.55 : 0.9) * (0.5 + 0.5*it.speed);
-      src.connect(g); g.connect(c.destination);
-      src.start(t0 + it.at);
-      scheduledTicks.push(src);
-    }
-    return scheduledTicks.length;
+    tickQueue = times; tickPos = 0;
+    tickBase = c.currentTime + 0.06;
+    pumpTicks();
+    return times.length;
   }
   function cancelTicks(){
+    if(tickTimer){ clearTimeout(tickTimer); tickTimer = null; }
     scheduledTicks.forEach(s=>{ try{ s.stop(); }catch(e){} });
     scheduledTicks = [];
   }
