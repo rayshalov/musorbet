@@ -549,7 +549,6 @@ async function spin(){
   const delta = targetAbsolute - normalizedStart;
 
   const DURATION = 4200;
-  const t0 = performance.now();
 
   function easeOutQuint(t){ return 1 - Math.pow(1-t, 5); }
 
@@ -573,16 +572,24 @@ async function spin(){
     Sound.scheduleTicks(times);
   }
 
-  await new Promise(resolve=>{
-    function frame(now){
-      const t = Math.min(1, (now - t0)/DURATION);
-      const cur = normalizedStart + delta * easeOutQuint(t);
-      setNeedle(cur);
-      if(t < 1) requestAnimationFrame(frame);
-      else { setNeedle(finalAngle); resolve(); }
+  /* --- вращение через Web Animations API: Safari выполняет такие анимации
+     целиком на композиторе — основной поток и rAF не участвуют, поэтому
+     нагрузка страницы (и запись инспектора) не дёргает стрелку.
+     40 ключевых кадров = кусочно-линейная аппроксимация easeOutQuint,
+     тайминги совпадают с рядом щелчков --- */
+  {
+    const SEG = 40;
+    const keyframes = [];
+    for(let i = 0; i <= SEG; i++){
+      const t = i/SEG;
+      keyframes.push({ transform: `rotate(${(normalizedStart + delta*easeOutQuint(t)).toFixed(2)}deg)`, offset: t });
     }
-    requestAnimationFrame(frame);
-  });
+    needleEl = $("#needle");
+    const anim = needleEl.animate(keyframes, { duration: DURATION, easing: "linear", fill: "forwards" });
+    await new Promise(r => setTimeout(r, DURATION + 60));
+    anim.cancel();
+    setNeedle(finalAngle);
+  }
 
   /* --- результат: по зафиксированным на старте значениям --- */
   const wonFinal = angleWon(finalAngle, spinChance);
