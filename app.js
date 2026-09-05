@@ -768,7 +768,13 @@ function boot(){
   initShopControls();
   initPanels();
   const st = $("#sound-toggle");
-  if(st) st.textContent = Sound.enabled ? "🔊" : "🔇";
+  if(st){
+    st.textContent = Sound.enabled ? "🔊" : "🔇";
+    st.classList.toggle("sound-off", !Sound.enabled);
+    if(!Sound.enabled && $("#spin-btn")){
+      toast("Звук выключен — нажми 🔇 в шапке, чтобы включить","err");
+    }
+  }
   renderAll();
   const sb = $("#spin-btn");
   if(sb) sb.addEventListener("click", spin);

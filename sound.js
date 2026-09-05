@@ -205,7 +205,10 @@ function toggleSound(){
   const on = Sound.toggle();
   if(!on) Sound.cancelTicks();   // выключил звук посреди прокрута — щелчки глушим
   const b = document.querySelector("#sound-toggle");
-  if(b) b.textContent = on ? "🔊" : "🔇";
+  if(b){
+    b.textContent = on ? "🔊" : "🔇";
+    b.classList.toggle("sound-off", !on);
+  }
 }
 
 /* перебор тембров трещотки (кнопка в шапке) */

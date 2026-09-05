@@ -439,3 +439,6 @@ h2{font-size:20px}
   .card{width:100%;height:auto;min-height:180px}
   .chance-nums b{font-size:20px}
 }
+
+/* выключенный звук — заметная плашка */
+.sound-off{border-color:rgba(229,72,77,.55) !important;color:var(--red) !important}
